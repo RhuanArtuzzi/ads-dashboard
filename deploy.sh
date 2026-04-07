@@ -21,6 +21,11 @@ if [ ! -f /opt/ads-dashboard/config/meta.yaml ]; then
   echo "ATENÇÃO: Edite /opt/ads-dashboard/config/meta.yaml com suas chaves do Meta Ads"
 fi
 
+echo "==> Carregando variáveis de ambiente..."
+set -a
+source .env
+set +a
+
 echo "==> Deploying stack ads-dashboard..."
 docker stack deploy -c docker-compose.yml ads-dashboard --with-registry-auth
 
