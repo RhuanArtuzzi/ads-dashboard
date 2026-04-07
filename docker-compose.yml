@@ -17,6 +17,9 @@ services:
       - artuzzi-net-desenv
     deploy:
       replicas: 1
+      placement:
+        constraints:
+          - node.hostname == desenv-01
       restart_policy:
         condition: on-failure
         delay: 10s
