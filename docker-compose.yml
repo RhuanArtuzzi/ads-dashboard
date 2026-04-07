@@ -1,0 +1,52 @@
+# Docker Stack para: docker stack deploy -c docker-compose.yml ads-dashboard
+# Imagens devem ser buildadas antes do deploy (ver deploy.sh)
+
+services:
+  backend:
+    image: ominy-ads-backend:latest
+    environment:
+      DATABASE_URL: postgresql://ominy:${POSTGRES_PASSWORD}@postgres_postgres:5432/ominy_ads
+      REDIS_URL: redis://redis_redis:6379
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: "8000"
+      NODE_ENV: production
+    volumes:
+      - /opt/ads-dashboard/config:/app/config
+    networks:
+      - artuzzi-net-desenv
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.ads-api.rule=Host(`api-dashboard.artuzzyia.com.br`)"
+        - "traefik.http.routers.ads-api.entrypoints=websecure"
+        - "traefik.http.routers.ads-api.tls=true"
+        - "traefik.http.routers.ads-api.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.ads-api.loadbalancer.server.port=8000"
+        - "traefik.docker.network=artuzzi-net-desenv"
+
+  frontend:
+    image: ominy-ads-frontend:latest
+    networks:
+      - artuzzi-net-desenv
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.ads-frontend.rule=Host(`dashboard.artuzzyia.com.br`)"
+        - "traefik.http.routers.ads-frontend.entrypoints=websecure"
+        - "traefik.http.routers.ads-frontend.tls=true"
+        - "traefik.http.routers.ads-frontend.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.ads-frontend.loadbalancer.server.port=3000"
+        - "traefik.docker.network=artuzzi-net-desenv"
+
+networks:
+  artuzzi-net-desenv:
+    external: true

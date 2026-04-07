@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  senhaHash String?
+  role      Role     @default(VIEWER)
+  criadoEm DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  VIEWER
+}
+
+model Cliente {
+  id         String     @id @default(cuid())
+  nome       String
+  targetCpl  Float?
+  targetRoas Float?
+  criadoEm  DateTime   @default(now())
+  contas     ContaAds[]
+  alertas    Alerta[]
+}
+
+model ContaAds {
+  id          String          @id @default(cuid())
+  clienteId   String
+  cliente     Cliente         @relation(fields: [clienteId], references: [id])
+  plataforma  Plataforma
+  accountId   String
+  accountName String
+  ativa       Boolean         @default(true)
+  ultimoSync  DateTime?
+  campanhas   Campanha[]
+  snapshots   SnapshotConta[]
+}
+
+enum Plataforma {
+  META_ADS
+}
+
+model Campanha {
+  id                   String             @id @default(cuid())
+  contaId              String
+  conta                ContaAds           @relation(fields: [contaId], references: [id])
+  campanhaIdPlataforma String
+  nome                 String
+  status               StatusCampanha
+  orcamentoDiario      Float?
+  atualizadoEm        DateTime           @default(now())
+  snapshots            SnapshotCampanha[]
+
+  @@unique([campanhaIdPlataforma, contaId])
+}
+
+enum StatusCampanha {
+  ATIVA
+  PAUSADA
+  REMOVIDA
+  EM_REVISAO
+}
+
+model SnapshotConta {
+  id         String   @id @default(cuid())
+  contaId    String
+  conta      ContaAds @relation(fields: [contaId], references: [id])
+  data       DateTime @db.Date
+  gasto      Float
+  impressoes Int
+  cliques    Int
+  conversoes Int
+  cpl        Float?
+  roas       Float?
+  ctr        Float?
+  criadoEm  DateTime @default(now())
+
+  @@unique([contaId, data])
+}
+
+model SnapshotCampanha {
+  id         String   @id @default(cuid())
+  campanhaId String
+  campanha   Campanha @relation(fields: [campanhaId], references: [id])
+  data       DateTime @db.Date
+  gasto      Float
+  impressoes Int
+  cliques    Int
+  conversoes Int
+  cpl        Float?
+  roas       Float?
+  ctr        Float?
+  criadoEm  DateTime @default(now())
+
+  @@unique([campanhaId, data])
+}
+
+model Alerta {
+  id        String     @id @default(cuid())
+  clienteId String
+  cliente   Cliente    @relation(fields: [clienteId], references: [id])
+  tipo      TipoAlerta
+  mensagem  String
+  lido      Boolean    @default(false)
+  criadoEm DateTime   @default(now())
+}
+
+enum TipoAlerta {
+  CPL_ALTO
+  ORCAMENTO_ESGOTANDO
+  SEM_ENTREGA
+  ROAS_BAIXO
+  QUEDA_CTR
+}
+
+model ResumoIA {
+  id       String   @id @default(cuid())
+  data     DateTime @unique @db.Date
+  conteudo String
+  criadoEm DateTime @default(now())
+}

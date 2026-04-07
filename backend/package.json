@@ -1,0 +1,44 @@
+{
+  "name": "ominy-ads-backend",
+  "version": "1.0.0",
+  "description": "Ominy Ads Dashboard — Backend Fastify",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "fastify": "^5.0.0",
+    "@fastify/jwt": "^9.0.0",
+    "@fastify/cors": "^10.0.0",
+    "@prisma/client": "^5.0.0",
+    "@langchain/core": "^0.3.0",
+    "@langchain/anthropic": "^0.3.0",
+    "@langchain/langgraph": "^0.2.0",
+    "langchain": "^0.3.0",
+    "axios": "^1.7.0",
+    "ioredis": "^5.4.0",
+    "node-cron": "^3.0.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.0",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.0.0",
+    "typescript": "^5.5.0",
+    "tsx": "^4.0.0",
+    "@types/node": "^20.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node-cron": "^3.0.0"
+  }
+}

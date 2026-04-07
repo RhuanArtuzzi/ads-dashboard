@@ -1,0 +1,27 @@
+# Env e segredos
+.env
+backend/config/meta.yaml
+
+# Dependências
+node_modules/
+*/node_modules/
+
+# Build
+dist/
+.next/
+out/
+
+# Prisma
+backend/prisma/migrations/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

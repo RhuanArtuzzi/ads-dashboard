@@ -1,0 +1,12 @@
+meta_api_version: "v20.0"
+
+contas:
+  - nome: "Nome do Cliente"
+    account_id: "act_123456789"
+    access_token: "EAAxxxx..."   # Token de longa duração (60 dias)
+    cliente_id: "cuid-do-cliente-no-banco"
+
+  - nome: "Outro Cliente"
+    account_id: "act_987654321"
+    access_token: "EAAyyyy..."
+    cliente_id: "cuid-do-cliente-no-banco"

@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ominy-bg: #0A0A1A;
+  --ominy-surface: #0F0F2A;
+  --ominy-border: #1A1A3A;
+  --ominy-cyan: #00FFFF;
+  --ominy-purple: #8A2BE2;
+}
+
+html, body {
+  background-color: var(--ominy-bg);
+  color: #ffffff;
+  font-family: var(--font-roboto), sans-serif;
+}
+
+/* Scrollbar Ominy */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--ominy-surface); }
+::-webkit-scrollbar-thumb { background: var(--ominy-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ominy-cyan); }
+
+@layer utilities {
+  .glow-cyan { box-shadow: 0 0 20px rgba(0, 255, 255, 0.25); }
+  .glow-purple { box-shadow: 0 0 20px rgba(138, 43, 226, 0.25); }
+  .border-cyan { border-color: rgba(0, 255, 255, 0.4); }
+  .text-gradient {
+    background: linear-gradient(135deg, #00FFFF, #8A2BE2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
