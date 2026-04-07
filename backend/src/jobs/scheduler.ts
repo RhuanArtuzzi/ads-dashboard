@@ -15,23 +15,28 @@ export function iniciarScheduler(): void {
     }
   })
 
-  // Resumo IA às 8h diário
-  cron.schedule('0 8 * * *', async () => {
-    console.log('[Scheduler] Gerando resumo diário do agente...')
-    try {
-      const conteudo = await gerarResumoDiario()
-      const hoje = new Date()
-      hoje.setHours(0, 0, 0, 0)
-      await prisma.resumoIA.upsert({
-        where: { data: hoje },
-        update: { conteudo },
-        create: { data: hoje, conteudo },
-      })
-      console.log('[Scheduler] Resumo IA gerado com sucesso')
-    } catch (e) {
-      console.error('[Scheduler] Erro ao gerar resumo IA:', e)
-    }
-  })
+  // Resumo IA às 8h diário (desativado por padrão — defina IA_AUTO=true no .env para ativar)
+  if (process.env.IA_AUTO === 'true') {
+    cron.schedule('0 8 * * *', async () => {
+      console.log('[Scheduler] Gerando resumo diário do agente...')
+      try {
+        const conteudo = await gerarResumoDiario()
+        const hoje = new Date()
+        hoje.setHours(0, 0, 0, 0)
+        await prisma.resumoIA.upsert({
+          where: { data: hoje },
+          update: { conteudo },
+          create: { data: hoje, conteudo },
+        })
+        console.log('[Scheduler] Resumo IA gerado com sucesso')
+      } catch (e) {
+        console.error('[Scheduler] Erro ao gerar resumo IA:', e)
+      }
+    })
+    console.log('[Scheduler] Resumo IA automático ATIVADO (8h diário)')
+  } else {
+    console.log('[Scheduler] Resumo IA automático DESATIVADO (use IA_AUTO=true para ativar)')
+  }
 
   console.log('[Scheduler] Jobs registrados: sync 6h, resumo IA 8h')
 }
