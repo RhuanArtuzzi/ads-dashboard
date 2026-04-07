@@ -39,6 +39,7 @@ model ContaAds {
   plataforma  Plataforma
   accountId   String
   accountName String
+  accessToken String?
   ativa       Boolean         @default(true)
   ultimoSync  DateTime?
   campanhas   Campanha[]

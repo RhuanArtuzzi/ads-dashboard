@@ -8,10 +8,46 @@ export function useClientes() {
   })
 }
 
+export function useContas() {
+  return useQuery({
+    queryKey: ['contas'],
+    queryFn: () => api.get('/clientes/contas').then((r) => r.data),
+  })
+}
+
 export function useContasConfig() {
   return useQuery({
     queryKey: ['contas-config'],
     queryFn: () => api.get('/clientes/config/contas').then((r) => r.data),
+  })
+}
+
+export function useCriarConta() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { clienteId: string; accountId: string; accountName: string; accessToken: string }) =>
+      api.post('/clientes/contas', data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contas'] })
+      qc.invalidateQueries({ queryKey: ['sync-status'] })
+    },
+  })
+}
+
+export function useAtualizarConta() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; accountName?: string; accessToken?: string; ativa?: boolean }) =>
+      api.put(`/clientes/contas/${id}`, data).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contas'] }),
+  })
+}
+
+export function useDeletarConta() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/clientes/contas/${id}`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contas'] }),
   })
 }
 

@@ -6,6 +6,20 @@ import {
   extrairConversoes,
 } from './metaAds.js'
 import { verificarAlertas } from './alertas.js'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+function configMetaDisponivel(): boolean {
+  try {
+    const configPath = path.resolve(__dirname, '../../config/meta.yaml')
+    return fs.existsSync(configPath)
+  } catch {
+    return false
+  }
+}
 
 function mapearStatus(status: string): 'ATIVA' | 'PAUSADA' | 'REMOVIDA' | 'EM_REVISAO' {
   switch (status?.toUpperCase()) {
@@ -102,8 +116,14 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
 }
 
 export async function sincronizarTodas(): Promise<{ sucesso: number; erro: number; erros: string[] }> {
-  const config = carregarConfigMeta()
   const contas = await prisma.contaAds.findMany({ where: { ativa: true } })
+  const apiVersion = 'v20.0'
+
+  // Carrega YAML como fallback (opcional)
+  let configYaml: Awaited<ReturnType<typeof carregarConfigMeta>> | null = null
+  if (configMetaDisponivel()) {
+    try { configYaml = carregarConfigMeta() } catch { /* ignora */ }
+  }
 
   let sucesso = 0
   let erro = 0
@@ -111,14 +131,18 @@ export async function sincronizarTodas(): Promise<{ sucesso: number; erro: numbe
 
   await Promise.allSettled(
     contas.map(async (conta) => {
-      const contaConfig = config.contas.find((c) => c.account_id === conta.accountId)
-      if (!contaConfig) {
-        erros.push(`Conta ${conta.accountId} sem configuração no meta.yaml`)
+      // Token: prioridade banco → fallback YAML
+      let token = conta.accessToken ?? null
+      if (!token && configYaml) {
+        token = configYaml.contas.find((c) => c.account_id === conta.accountId)?.access_token ?? null
+      }
+      if (!token) {
+        erros.push(`Conta "${conta.accountName}" sem access token configurado`)
         erro++
         return
       }
       try {
-        await sincronizarConta(conta.id, conta.accountId, contaConfig.access_token, config.meta_api_version)
+        await sincronizarConta(conta.id, conta.accountId, token, apiVersion)
         sucesso++
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)

@@ -1,7 +1,12 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { prisma } from '../core/database.js'
-import { clienteCreateSchema, clienteUpdateSchema } from '../schemas/clientes.js'
+import { clienteCreateSchema, clienteUpdateSchema, contaCreateSchema, contaUpdateSchema } from '../schemas/clientes.js'
 import { carregarConfigMeta } from '../services/metaAds.js'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export const clientesRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', async () => {
@@ -30,23 +35,44 @@ export const clientesRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true }
   })
 
-  // GET /config/contas — lista contas do meta.yaml + status no banco
+  // GET /contas — lista todas as contas do banco
+  app.get('/contas', async () => {
+    return prisma.contaAds.findMany({
+      include: { cliente: { select: { nome: true } } },
+      orderBy: { accountName: 'asc' },
+    })
+  })
+
+  // POST /contas — criar conta com token
+  app.post('/contas', async (request, reply) => {
+    const body = contaCreateSchema.safeParse(request.body)
+    if (!body.success) return reply.code(400).send({ error: 'Dados inválidos', details: body.error.flatten() })
+    return prisma.contaAds.create({ data: body.data })
+  })
+
+  // PUT /contas/:id — atualizar conta
+  app.put('/contas/:id', async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = contaUpdateSchema.safeParse(request.body)
+    if (!body.success) return reply.code(400).send({ error: 'Dados inválidos', details: body.error.flatten() })
+    const conta = await prisma.contaAds.update({ where: { id }, data: body.data }).catch(() => null)
+    if (!conta) return reply.code(404).send({ error: 'Conta não encontrada' })
+    return conta
+  })
+
+  // DELETE /contas/:id — remover conta
+  app.delete('/contas/:id', async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const conta = await prisma.contaAds.delete({ where: { id } }).catch(() => null)
+    if (!conta) return reply.code(404).send({ error: 'Conta não encontrada' })
+    return { ok: true }
+  })
+
+  // GET /config/contas — mantido para compatibilidade
   app.get('/config/contas', async () => {
-    try {
-      const config = carregarConfigMeta()
-      const contas = await prisma.contaAds.findMany({ where: { ativa: true } })
-      return config.contas.map((c) => {
-        const contaBanco = contas.find((b) => b.accountId === c.account_id)
-        return {
-          nome: c.nome,
-          accountId: c.account_id,
-          clienteId: c.cliente_id,
-          ativa: !!contaBanco,
-          ultimoSync: contaBanco?.ultimoSync ?? null,
-        }
-      })
-    } catch {
-      return []
-    }
+    return prisma.contaAds.findMany({
+      include: { cliente: { select: { nome: true } } },
+      orderBy: { accountName: 'asc' },
+    })
   })
 }
