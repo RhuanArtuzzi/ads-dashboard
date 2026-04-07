@@ -12,7 +12,8 @@ const navItems = [
   { href: '/meta',              label: 'Meta Ads',     icon: Megaphone },
   { href: '/alertas',           label: 'Alertas',      icon: Bell },
   { href: '/ia',                label: 'Agente IA',    icon: Bot },
-  { href: '/configuracoes/clientes', label: 'Config', icon: Settings },
+  { href: '/configuracoes/conexoes', label: 'Conexoes', icon: Settings },
+  { href: '/configuracoes/clientes', label: 'Clientes cfg', icon: Settings },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
