@@ -1,7 +1,7 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 FROM base AS builder
 COPY tsconfig.json ./
@@ -14,7 +14,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 RUN apk add --no-cache openssl
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY prisma ./prisma
