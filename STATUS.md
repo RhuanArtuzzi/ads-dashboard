@@ -53,22 +53,37 @@
 
 ## Estado atual ao pausar
 
-Tudo implementado, aguardando deploy:
-- Login OK (`admin@ominy.com.br` / `admin123`)
-- Dashboard exibindo dados do seed (R$17.425 em 30 dias)
-- Backend respondendo requisições
-- Análise IA automática **desativada** (botão manual disponível na UI)
-- Gerenciamento de contas Meta Ads pela UI implementado e deployado
-- Seção "Saldos das Contas" implementada — aguarda rebuild da imagem + `prisma generate` no container
+Backend em crash-loop na desenv-01 — `.env` com `ANTHROPIC_API_KEY` quebrada/ausente:
+- Código commitado e pushado (branch master, commit `821b322`)
+- Imagens Docker buildadas com sucesso na desenv-01
+- Stack `ads-dashboard` deployada, mas backend reiniciando constantemente por falha de validação Zod na `ANTHROPIC_API_KEY`
+- Frontend online, mas todas as chamadas ao backend retornam erro (backend offline)
+- `/balances` retorna 404 porque o backend não sobe
 
 ---
 
 ## Próximo passo exato para retomar
 
-1. Fazer push e rebuild da imagem do backend (para o `prisma generate` rodar com o novo model)
-2. Verificar se o n8n está populando `ad_account_balances` corretamente
-3. Acessar `dashboard.artuzzyia.com.br` e confirmar que a seção "Saldos das Contas" aparece na home
-4. Se necessário, rodar `prisma db push` dentro do container do backend para sincronizar o model sem reset
+O único problema é o `.env` na desenv-01 com a chave Anthropic faltando ou quebrada. Resolver assim:
+
+**Na desenv-01, execute um bloco por vez:**
+
+```bash
+> ~/ads-dashboard/.env
+echo 'POSTGRES_PASSWORD=SFm7MQyeZklCcYbKR' >> ~/ads-dashboard/.env
+echo 'JWT_SECRET=1d16df324fcfea991f316ec4d4e50b689ae94f95370beccdc05cd63f4d2b85f2' >> ~/ads-dashboard/.env
+echo 'ANTHROPIC_API_KEY=sk-ant-...' >> ~/ads-dashboard/.env   # cole sua chave real aqui
+echo 'NEXT_PUBLIC_API_URL=https://api-dashboard.artuzzyia.com.br' >> ~/ads-dashboard/.env
+echo 'IA_AUTO=false' >> ~/ads-dashboard/.env
+```
+
+Depois verificar com `cat ~/ads-dashboard/.env` e rodar:
+
+```bash
+cd ~/ads-dashboard && bash deploy.sh
+```
+
+Após o deploy, confirmar que a seção "Saldos das Contas" aparece na home de `dashboard.artuzzyia.com.br`.
 
 ---
 
