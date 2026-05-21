@@ -2,10 +2,12 @@
 import { useState } from 'react'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { GastoChart } from '@/components/dashboard/GastoChart'
+import { AccountBalanceCard } from '@/components/dashboard/AccountBalanceCard'
 import { ResumoAgente } from '@/components/ia/ResumoAgente'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useOverview, useGrafico } from '@/lib/queries/metricas'
+import { useBalances } from '@/lib/queries/useBalances'
 
 const periodos = [
   { label: 'Hoje', value: 'hoje' },
@@ -17,6 +19,7 @@ export default function HomePage() {
   const [periodo, setPeriodo] = useState('30d')
   const { data: overview, isLoading } = useOverview(periodo)
   const { data: grafico } = useGrafico(periodo)
+  const { data: balances, isLoading: balancesLoading, isError: balancesError } = useBalances()
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,6 +82,42 @@ export default function HomePage() {
           </div>
         )}
       </Card>
+
+      {/* Saldos das Contas */}
+      <div className="flex flex-col gap-4">
+        <h2 className="font-heading text-sm text-ominy-cyan uppercase tracking-widest">
+          Saldos das Contas
+        </h2>
+        {balancesLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} className="h-[120px] animate-pulse bg-ominy-border" />
+            ))}
+          </div>
+        ) : balancesError ? (
+          <p className="text-sm font-body text-ominy-muted">
+            Nao foi possivel carregar os saldos.
+          </p>
+        ) : !balances || balances.length === 0 ? (
+          <p className="text-sm font-body text-ominy-muted">
+            Nenhuma conta sincronizada ainda.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {balances.map((b) => (
+              <AccountBalanceCard
+                key={b.id}
+                platform={b.platform}
+                accountName={b.accountName}
+                accountId={b.accountId}
+                balance={b.balance}
+                currency={b.currency}
+                updatedAt={b.updatedAt}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Resumo IA */}
       <ResumoAgente />

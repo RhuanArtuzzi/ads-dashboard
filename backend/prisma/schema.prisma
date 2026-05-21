@@ -129,3 +129,16 @@ model ResumoIA {
   conteudo String
   criadoEm DateTime @default(now())
 }
+
+model AdAccountBalance {
+  id          Int      @id @default(autoincrement())
+  platform    String   @db.VarChar(20)
+  accountId   String   @db.VarChar(100) @map("account_id")
+  accountName String?  @db.VarChar(255) @map("account_name")
+  balance     Decimal? @db.Decimal(15, 2)
+  currency    String?  @db.VarChar(10)
+  updatedAt   DateTime @default(now()) @map("updated_at")
+
+  @@unique([platform, accountId])
+  @@map("ad_account_balances")
+}

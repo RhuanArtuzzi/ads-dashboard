@@ -1,9 +1,21 @@
 # STATUS — Ominy Ads Dashboard
-**Última atualização:** 2026-04-07
+**Última atualização:** 2026-05-21
 
 ---
 
-## Concluído hoje
+## Concluído hoje (2026-05-21)
+
+### Saldos das Contas (nova feature)
+- Tabela `ad_account_balances` criada via PgAdmin (fora do Prisma migrate) — populada por workflow n8n a cada 6h via Graph API Meta
+- Model `AdAccountBalance` adicionado ao `schema.prisma` com `@@map("ad_account_balances")` — compatível com tabela existente
+- Rota `GET /balances` criada em `backend/src/routes/balances.ts` e registrada no `server.ts`
+- Hook `useBalances` criado em `frontend/src/lib/queries/useBalances.ts` (React Query, staleTime 10min)
+- Componente `AccountBalanceCard` criado com badge de plataforma ciano, saldo formatado em moeda local, badge de alerta âmbar quando saldo ≤ 0, glow hover ciano, timestamp relativo
+- Seção "Saldos das Contas" adicionada na home com grid responsivo (1/2/3 cols), skeleton loading, estados de erro e vazio
+
+---
+
+## Histórico
 
 ### Infraestrutura
 - `docker-compose.yml` — stack Docker Swarm com rede externa `artuzzi-net-desenv`, Traefik v2 (letsencryptresolver), placement constraint backend na desenv-01
@@ -41,22 +53,22 @@
 
 ## Estado atual ao pausar
 
-Tudo em produção e funcionando:
+Tudo implementado, aguardando deploy:
 - Login OK (`admin@ominy.com.br` / `admin123`)
 - Dashboard exibindo dados do seed (R$17.425 em 30 dias)
 - Backend respondendo requisições
 - Análise IA automática **desativada** (botão manual disponível na UI)
 - Gerenciamento de contas Meta Ads pela UI implementado e deployado
+- Seção "Saldos das Contas" implementada — aguarda rebuild da imagem + `prisma generate` no container
 
 ---
 
 ## Próximo passo exato para retomar
 
-1. Acessar `dashboard.artuzzyia.com.br/configuracoes/conexoes`
-2. Criar os clientes reais em `/configuracoes/clientes`
-3. Adicionar as contas Meta Ads reais (Account ID + Access Token) pelo formulário
-4. Clicar em "Sincronizar agora" para buscar dados reais da Meta API
-5. Verificar se os dados reais aparecem no dashboard
+1. Fazer push e rebuild da imagem do backend (para o `prisma generate` rodar com o novo model)
+2. Verificar se o n8n está populando `ad_account_balances` corretamente
+3. Acessar `dashboard.artuzzyia.com.br` e confirmar que a seção "Saldos das Contas" aparece na home
+4. Se necessário, rodar `prisma db push` dentro do container do backend para sincronizar o model sem reset
 
 ---
 
@@ -72,6 +84,8 @@ Tudo em produção e funcionando:
 | `IA_AUTO=false` por padrão | Evitar gasto desnecessário de tokens Anthropic |
 | Placement constraint `node.hostname == desenv-01` | Config bind mount só existe na desenv-01, não no worker-01 |
 | Reutilizar `postgres_postgres` e `redis_redis` | Serviços já existentes no Swarm — sem criar containers extras |
+| `ad_account_balances` criada via SQL (fora do Prisma migrate) | n8n faz upsert direto — Prisma acessa via `@@map` sem recriar a tabela |
+| n8n responsável pelos saldos | Desacopla o fluxo de saldo do backend — sem dependência de novo cron |
 
 ---
 

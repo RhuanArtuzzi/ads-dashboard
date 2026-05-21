@@ -49,7 +49,8 @@ O dashboard adota a identidade Ominy:
 - [ ] Gráfico de linha: gasto por dia (últimos 30 dias)
 - [ ] Comparativo de período: este período vs período anterior
 - [ ] Seletor de período (hoje / 7 dias / 30 dias / personalizado)
-- [ ] Painel de resumo do agente IA do dia
+- [x] Painel de resumo do agente IA do dia
+- [x] Seção "Saldos das Contas" — cards com saldo por conta Meta Ads, badge de alerta quando zerado, timestamp de última atualização
 
 ### 3.2 Por Cliente
 - [ ] Lista de clientes com resumo (gasto, leads, CPL, ROAS, badge de alerta)
@@ -126,19 +127,23 @@ Tudo rodando em Docker Compose (3 containers: frontend, backend, postgres + redi
 ## 5. Fluxo de Dados
 
 ```
-Config file (meta.yaml) → Meta Marketing API (v20) → backend coleta métricas
-                                                              ↓
-APScheduler (cron 6h) → busca métricas de todas as contas configuradas
-                      → salva snapshot no PostgreSQL (upsert — idempotente)
-                      → calcula CPL, ROAS, variações
-                      → verifica alertas automáticos
-                      ↓
-APScheduler (cron 8h) → LangChain Agent analisa métricas do dia
-                      → gera resumo como gestor de tráfego experiente
-                      → salva no banco
+Config file (meta.yaml) + ContaAds.accessToken (banco)
+  → Meta Marketing API (v20) → backend coleta métricas
+                                        ↓
+node-cron (6h) → busca métricas de todas as contas
+              → salva snapshot no PostgreSQL (upsert — idempotente)
+              → calcula CPL, ROAS, variações
+              → verifica alertas automáticos
+              ↓
+node-cron (8h) → LangChain Agent analisa métricas do dia
+              → gera resumo como gestor de tráfego experiente
+              → salva no banco (ResumoIA)
+
+n8n (6h) → Graph API Meta Ads → upsert em ad_account_balances (tabela externa ao Prisma flow)
 
 Dashboard (Next.js) → chama API backend → lê do banco (sem chamar Meta API em tempo real)
-                    → botão "Atualizar agora" → força sync manual via POST /api/sync
+                    → GET /balances → lê ad_account_balances via Prisma
+                    → botão "Atualizar agora" → força sync manual via POST /sync/manual
 ```
 
 ---
@@ -177,7 +182,17 @@ Sugestões do gestor:
 
 ---
 
-## 8. Fora do Escopo (MVP)
+## 8. Integrações Externas
+
+| Integração | Responsável | Frequência | Destino |
+|---|---|---|---|
+| Meta Marketing API (métricas) | Backend node-cron | A cada 6h | `SnapshotConta`, `SnapshotCampanha` |
+| Meta Graph API (saldos) | n8n workflow | A cada 6h | `ad_account_balances` |
+| Anthropic Claude API (análise IA) | Backend node-cron | Às 8h (se `IA_AUTO=true`) | `ResumoIA` |
+
+---
+
+## 9. Fora do Escopo (MVP)
 
 - Google Ads (v2)
 - Editor de campanhas (só leitura no MVP)
@@ -189,7 +204,7 @@ Sugestões do gestor:
 
 ---
 
-## 9. Roadmap
+## 10. Roadmap
 
 | Fase | Conteúdo |
 |---|---|

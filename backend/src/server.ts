@@ -8,6 +8,7 @@ import { clientesRoutes } from './routes/clientes.js'
 import { alertasRoutes } from './routes/alertas.js'
 import { iaRoutes } from './routes/ia.js'
 import { syncRoutes } from './routes/sync.js'
+import { balancesRoutes } from './routes/balances.js'
 import { iniciarScheduler } from './jobs/scheduler.js'
 
 const app = Fastify({ logger: true })
@@ -31,6 +32,7 @@ await app.register(clientesRoutes, { prefix: '/clientes' })
 await app.register(alertasRoutes, { prefix: '/alertas' })
 await app.register(iaRoutes, { prefix: '/ia' })
 await app.register(syncRoutes, { prefix: '/sync' })
+await app.register(balancesRoutes, { prefix: '' })
 
 app.get('/health', async () => ({ status: 'ok' }))
 
