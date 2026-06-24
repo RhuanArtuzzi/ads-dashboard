@@ -17,18 +17,12 @@ if [ -z "$CONTAINER_ID" ]; then
   exit 1
 fi
 
-echo "Criando banco ominy_ads e usuario ominy..."
+echo "Criando banco ominy_ads (usuario ominy ja eh o superuser do container)..."
 
-docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" "$CONTAINER_ID" psql -U postgres -c "
-CREATE USER ominy WITH PASSWORD '$POSTGRES_PASSWORD';
-" 2>/dev/null || echo "(usuario ominy ja existe)"
-
-docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" "$CONTAINER_ID" psql -U postgres -c "
+# O container postgres_postgres usa POSTGRES_USER=ominy como superuser de bootstrap
+# (sem role "postgres"). Conecta no banco padrao "ominy" para criar o banco "ominy_ads".
+docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" "$CONTAINER_ID" psql -U ominy -d ominy -c "
 CREATE DATABASE ominy_ads OWNER ominy;
 " 2>/dev/null || echo "(banco ominy_ads ja existe)"
-
-docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" "$CONTAINER_ID" psql -U postgres -c "
-GRANT ALL PRIVILEGES ON DATABASE ominy_ads TO ominy;
-"
 
 echo "Banco criado! DATABASE_URL: postgresql://ominy:$POSTGRES_PASSWORD@postgres_postgres:5432/ominy_ads"
