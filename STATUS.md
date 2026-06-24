@@ -120,7 +120,7 @@ Após o deploy, confirmar que a seção "Saldos das Contas" aparece na home de `
 | Access token no banco (ContaAds.accessToken) | Evita editar arquivo YAML no servidor — gerenciado pela UI |
 | YAML como fallback opcional | Compatibilidade com configuração antiga, sem quebrar nada |
 | `IA_AUTO=false` por padrão | Evitar gasto desnecessário de tokens Anthropic |
-| Placement constraint `node.hostname == desenv-00` | Config bind mount só existe na desenv-00 (servidor único após migração) |
+| Placement constraint `node.hostname == vmi3133382` | Hostname real do node Swarm (apelido "desenv-00" não corresponde ao `docker node ls`) — config bind mount só existe nesse servidor único |
 | Reutilizar `postgres_postgres` e `redis_redis` | Serviços já existentes no Swarm — sem criar containers extras |
 | `ad_account_balances` criada via SQL (fora do Prisma migrate) | n8n faz upsert direto — Prisma acessa via `@@map` sem recriar a tabela |
 | n8n responsável pelos saldos | Desacopla o fluxo de saldo do backend — sem dependência de novo cron |

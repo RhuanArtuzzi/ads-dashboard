@@ -19,7 +19,7 @@ redis       → Cache de métricas (TTL 1h) via ioredis
 
 Tudo orquestrado via `docker-compose.yml` na raiz.
 
-Infraestrutura: Docker Swarm no desenv-00 (5.189.151.101)
+Infraestrutura: Docker Swarm em servidor único, IP 5.189.151.101, hostname real do node Swarm `vmi3133382` (apelido "desenv-00" é só rótulo informal — usar o hostname real em `node.hostname` constraints)
 Rede: ominy-network (overlay, external)
 Traefik: v2.11 (stack separada, já rodando no servidor)
 
