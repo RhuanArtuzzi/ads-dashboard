@@ -84,9 +84,13 @@ export async function verificarAlertas(contaId: string): Promise<void> {
   }
 }
 
+export async function alertarFalhaSync(clienteId: string, mensagem: string): Promise<void> {
+  await criarAlertaSeNaoExiste(clienteId, 'SYNC_FALHOU', mensagem)
+}
+
 async function criarAlertaSeNaoExiste(
   clienteId: string,
-  tipo: 'CPL_ALTO' | 'ORCAMENTO_ESGOTANDO' | 'SEM_ENTREGA' | 'ROAS_BAIXO' | 'QUEDA_CTR',
+  tipo: 'CPL_ALTO' | 'ORCAMENTO_ESGOTANDO' | 'SEM_ENTREGA' | 'ROAS_BAIXO' | 'QUEDA_CTR' | 'SYNC_FALHOU',
   mensagem: string
 ): Promise<void> {
   const hoje = new Date()

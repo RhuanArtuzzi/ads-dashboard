@@ -3,9 +3,10 @@ import {
   carregarConfigMeta,
   buscarInsights,
   buscarCampanhas,
+  buscarSaldoConta,
   extrairConversoes,
 } from './metaAds.js'
-import { verificarAlertas } from './alertas.js'
+import { verificarAlertas, alertarFalhaSync } from './alertas.js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -147,6 +148,51 @@ export async function sincronizarTodas(): Promise<{ sucesso: number; erro: numbe
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         erros.push(`Erro em ${conta.accountName}: ${msg}`)
+        await alertarFalhaSync(conta.clienteId, `Falha ao sincronizar métricas da conta "${conta.accountName}": ${msg}`)
+        erro++
+      }
+    })
+  )
+
+  return { sucesso, erro, erros }
+}
+
+export async function sincronizarSaldos(): Promise<{ sucesso: number; erro: number; erros: string[] }> {
+  const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'META_ADS' } })
+  const apiVersion = 'v20.0'
+
+  let configYaml: Awaited<ReturnType<typeof carregarConfigMeta>> | null = null
+  if (configMetaDisponivel()) {
+    try { configYaml = carregarConfigMeta() } catch { /* ignora */ }
+  }
+
+  let sucesso = 0
+  let erro = 0
+  const erros: string[] = []
+
+  await Promise.allSettled(
+    contas.map(async (conta) => {
+      let token = conta.accessToken ?? null
+      if (!token && configYaml) {
+        token = configYaml.contas.find((c) => c.account_id === conta.accountId)?.access_token ?? null
+      }
+      if (!token) {
+        erros.push(`Conta "${conta.accountName}" sem access token configurado`)
+        erro++
+        return
+      }
+      try {
+        const { name, balance, currency } = await buscarSaldoConta(conta.accountId, token, apiVersion)
+        await prisma.adAccountBalance.upsert({
+          where: { platform_accountId: { platform: 'meta', accountId: conta.accountId } },
+          update: { accountName: name, balance, currency, updatedAt: new Date() },
+          create: { platform: 'meta', accountId: conta.accountId, accountName: name, balance, currency },
+        })
+        sucesso++
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        erros.push(`Erro ao buscar saldo de ${conta.accountName}: ${msg}`)
+        await alertarFalhaSync(conta.clienteId, `Falha ao sincronizar saldo da conta "${conta.accountName}": ${msg}`)
         erro++
       }
     })

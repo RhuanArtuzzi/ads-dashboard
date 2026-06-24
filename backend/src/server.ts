@@ -10,6 +10,7 @@ import { iaRoutes } from './routes/ia.js'
 import { syncRoutes } from './routes/sync.js'
 import { balancesRoutes } from './routes/balances.js'
 import { iniciarScheduler } from './jobs/scheduler.js'
+import { iniciarSyncWorker, registrarJobsRecorrentes } from './jobs/syncWorker.js'
 
 const app = Fastify({ logger: true })
 
@@ -37,6 +38,8 @@ await app.register(balancesRoutes, { prefix: '' })
 app.get('/health', async () => ({ status: 'ok' }))
 
 iniciarScheduler()
+iniciarSyncWorker()
+await registrarJobsRecorrentes()
 
 const port = parseInt(env.PORT)
 await app.listen({ port, host: '0.0.0.0' })

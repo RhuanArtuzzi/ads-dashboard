@@ -6,6 +6,7 @@ const tipoConfig: Record<string, { label: string; variant: 'red' | 'yellow' | 'c
   SEM_ENTREGA:         { label: 'Sem Entrega',       variant: 'red' },
   ROAS_BAIXO:          { label: 'ROAS Baixo',        variant: 'yellow' },
   QUEDA_CTR:           { label: 'Queda CTR',         variant: 'cyan' },
+  SYNC_FALHOU:         { label: 'Falha de Sync',      variant: 'red' },
 }
 
 export function AlertaBadge({ tipo }: { tipo: string }) {

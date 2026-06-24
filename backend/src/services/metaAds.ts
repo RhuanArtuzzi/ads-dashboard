@@ -71,6 +71,18 @@ export async function buscarCampanhas(
   return data.data ?? []
 }
 
+export async function buscarSaldoConta(
+  accountId: string,
+  accessToken: string,
+  apiVersion: string
+): Promise<{ name: string; balance: number; currency: string }> {
+  const url = `https://graph.facebook.com/${apiVersion}/act_${accountId}`
+  const { data } = await axios.get(url, {
+    params: { fields: 'id,name,balance,currency', access_token: accessToken },
+  })
+  return { name: data.name, balance: parseFloat(data.balance ?? '0') / 100, currency: data.currency ?? 'BRL' }
+}
+
 export function extrairConversoes(actions: InsightCampanha['actions']): number {
   if (!actions) return 0
   const convTypes = ['lead', 'offsite_conversion.fb_pixel_lead', 'omni_lead']

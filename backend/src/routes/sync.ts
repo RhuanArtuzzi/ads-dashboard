@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { sincronizarTodas } from '../services/sync.js'
+import { sincronizarTodas, sincronizarSaldos } from '../services/sync.js'
 import { prisma } from '../core/database.js'
 
 export const syncRoutes: FastifyPluginAsync = async (app) => {
@@ -10,6 +10,16 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       return reply.code(500).send({ error: 'Erro ao sincronizar', details: msg })
+    }
+  })
+
+  app.post('/manual/saldos', async (_request, reply) => {
+    try {
+      const resultado = await sincronizarSaldos()
+      return { ok: true, ...resultado }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      return reply.code(500).send({ error: 'Erro ao sincronizar saldos', details: msg })
     }
   })
 

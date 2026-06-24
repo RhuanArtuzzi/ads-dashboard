@@ -121,6 +121,7 @@ enum TipoAlerta {
   SEM_ENTREGA
   ROAS_BAIXO
   QUEDA_CTR
+  SYNC_FALHOU
 }
 
 model ResumoIA {

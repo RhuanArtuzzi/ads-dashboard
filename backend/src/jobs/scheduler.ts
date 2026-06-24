@@ -1,19 +1,9 @@
 import cron from 'node-cron'
-import { sincronizarTodas } from '../services/sync.js'
 import { gerarResumoDiario } from '../services/agenteIA.js'
 import { prisma } from '../core/database.js'
 
 export function iniciarScheduler(): void {
-  // Sync a cada 6h: 0h, 6h, 12h, 18h
-  cron.schedule('0 0,6,12,18 * * *', async () => {
-    console.log('[Scheduler] Iniciando sync de métricas...')
-    try {
-      const resultado = await sincronizarTodas()
-      console.log(`[Scheduler] Sync concluído: ${resultado.sucesso} sucesso, ${resultado.erro} erros`)
-    } catch (e) {
-      console.error('[Scheduler] Erro no sync:', e)
-    }
-  })
+  // Sync de Meta Ads (metricas + saldo) roda via BullMQ - ver jobs/syncWorker.ts
 
   // Resumo IA às 8h diário (desativado por padrão — defina IA_AUTO=true no .env para ativar)
   if (process.env.IA_AUTO === 'true') {
@@ -38,5 +28,5 @@ export function iniciarScheduler(): void {
     console.log('[Scheduler] Resumo IA automático DESATIVADO (use IA_AUTO=true para ativar)')
   }
 
-  console.log('[Scheduler] Jobs registrados: sync 6h, resumo IA 8h')
+  console.log('[Scheduler] Job registrado: resumo IA 8h')
 }
