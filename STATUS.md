@@ -1,23 +1,33 @@
 # STATUS — Ominy Ads Dashboard
-**Última atualização:** 2026-06-17
+**Última atualização:** 2026-06-24
 
 ---
 
-## Migração de infraestrutura (2026-06-17)
+## Migração de infraestrutura — CONCLUÍDA (2026-06-17 a 2026-06-24)
 
 O servidor `desenv-01` foi deletado pela Contabo por inadimplência. Infraestrutura reconstruída do zero em um único servidor:
 
 | Item | Antes | Agora |
 |---|---|---|
-| Servidor de app | desenv-01 (deletado) | desenv-00 |
-| Servidor de banco | worker-01 (separado) | desenv-00 (mesmo servidor) |
+| Servidor de app | desenv-01 (deletado) | hostname real `vmi3133382` (apelido informal "desenv-00") |
+| Servidor de banco | worker-01 (separado) | mesmo servidor `vmi3133382` |
 | IP | 37.60.251.34 | 5.189.151.101 |
 | Domínio | artuzzyia.com.br | ominy.tec.br |
 | Rede Docker | artuzzi-net-desenv | ominy-network |
 | certresolver Traefik | letsencryptresolver | letsencrypt |
 | PostgreSQL password | SFm7MQyeZklCcYbKR | Ominy@2026!Secure |
+| Redis | redis_redis (perdido) | recriado via `redis-compose.yml` |
 
-Dados perdidos: n8n e todos os workflows, Traefik antigo, containers e imagens Docker, `meta.yaml` e `.env` do servidor. Banco de dados (`ominy_ads`) **não** foi perdido pois estava no worker-01 — precisa ser migrado/restaurado para o novo banco em desenv-00 se houver backup; caso contrário, recriar via seed.
+**Status: dashboard 100% funcional em produção** — `https://dashboard.ominy.tec.br` carregando KPIs, gráfico, saldos das contas e Gestor IA com dados do seed mockado.
+
+Dados perdidos definitivamente (sem backup): n8n e todos os workflows, banco `ominy_ads` antigo (recriado do zero via seed — não havia backup), `meta.yaml` e `.env` do servidor antigo.
+
+### Particularidades descobertas durante a migração (cuidado se repetir o processo)
+- `postgres_postgres` foi inicializado com `POSTGRES_USER=ominy` como superuser de bootstrap — **não existe role `postgres`**. `init-db.sh` foi corrigido para conectar como `ominy` no banco padrão `ominy`.
+- O hostname real do node Swarm é `vmi3133382`, não bate com o apelido "desenv-00" usado informalmente — `node.hostname` constraints usam o hostname real.
+- Bash com `!` em senha (`Ominy@2026!Secure`) dispara history expansion dentro de aspas duplas — usar sempre aspas simples em comandos interativos.
+- Traefik cacheia falha de ACME e não tenta de novo automaticamente mesmo após o DNS ficar correto — precisou de `docker service update --force traefik_traefik` para forçar nova tentativa.
+- Imagem de produção do backend não tem `tsx` (dev dependency) — seed via `npx -y tsx prisma/seed.ts` dentro do container.
 
 Subdomínio `dashboard.ominy.tec.br` ainda não foi adicionado no Cloudflare — adicionar manualmente.
 
@@ -75,38 +85,21 @@ Ver detalhes de workflows n8n pendentes em [N8N_WORKFLOWS_PLAN.md](N8N_WORKFLOWS
 
 ## Estado atual ao pausar
 
-Infraestrutura reconstruída do zero em desenv-00 após exclusão da desenv-01. Código e schema Prisma não mudaram — apenas configuração de deploy (ver seção "Migração de infraestrutura" acima).
+Migração de infraestrutura concluída e validada visualmente em produção (2026-06-24): home carregando KPIs, gráfico de gasto diário, saldos das contas (dados mockados do seed) e Gestor IA.
+
+**Decisão arquitetural pendente de implementação:** o n8n foi removido do escopo deste projeto (ver [[n8n-sync-architecture]] na memória). Todo sync de Meta Ads / Google Ads passa a ser feito no próprio backend, usando **BullMQ + Redis** para scheduling (não `node-cron` puro), com Google Ads usando uma única conta MCC da agência (refresh token único). Falhas de sync geram registro na tabela `Alerta` do Prisma; notificação externa é extensão futura. O `N8N_WORKFLOWS_PLAN.md` no repo está **obsoleto** — será substituído por um plano de implementação no backend.
 
 ---
 
 ## Próximo passo exato para retomar
 
-**No servidor desenv-00:**
+Infra está pronta e estável. O próximo bloco de trabalho é a implementação do sync no backend (substituindo a dependência do n8n):
 
-```bash
-git clone https://github.com/RhuanArtuzzi/ads-dashboard.git ~/ads-dashboard
-cd ~/ads-dashboard
-
-> .env
-echo 'POSTGRES_PASSWORD=Ominy@2026!Secure' >> .env
-echo 'JWT_SECRET=...' >> .env   # gerar novo com openssl rand -hex 32
-echo 'ANTHROPIC_API_KEY=sk-ant-...' >> .env   # cole sua chave real aqui
-echo 'NEXT_PUBLIC_API_URL=https://api-dashboard.ominy.tec.br' >> .env
-echo 'IA_AUTO=false' >> .env
-```
-
-Depois verificar com `cat .env` e rodar:
-
-```bash
-POSTGRES_PASSWORD=Ominy@2026!Secure bash init-db.sh
-bash deploy.sh
-```
-
-Adicionar no Cloudflare os registros DNS (`A`, DNS only) apontando para `5.189.151.101`:
-- `dashboard.ominy.tec.br`
-- `api-dashboard.ominy.tec.br`
-
-Após o deploy, confirmar que a seção "Saldos das Contas" aparece na home de `dashboard.ominy.tec.br`. Nota: o saldo vai aparecer vazio até o workflow n8n ser recriado (ver [N8N_WORKFLOWS_PLAN.md](N8N_WORKFLOWS_PLAN.md)).
+1. Adicionar BullMQ como dependência do backend (`npm install bullmq`)
+2. Criar jobs de sync: saldo Meta (multi-conta, a partir de `ContaAds` no banco), métricas Meta (`insights` API), saldo + métricas Google Ads (OAuth via conta MCC)
+3. Reaproveitar `services/metaAds.ts` e `services/sync.ts` existentes como base
+4. Registrar os jobs recorrentes no lugar do scheduler `node-cron` atual em `backend/src/jobs/scheduler.ts`
+5. Implementar alerta automático quando um job de sync falhar (token expirado, erro de API) — usar tabela `Alerta`
 
 ---
 
@@ -122,8 +115,8 @@ Após o deploy, confirmar que a seção "Saldos das Contas" aparece na home de `
 | `IA_AUTO=false` por padrão | Evitar gasto desnecessário de tokens Anthropic |
 | Placement constraint `node.hostname == vmi3133382` | Hostname real do node Swarm (apelido "desenv-00" não corresponde ao `docker node ls`) — config bind mount só existe nesse servidor único |
 | Reutilizar `postgres_postgres` e `redis_redis` | Serviços já existentes no Swarm — sem criar containers extras |
-| `ad_account_balances` criada via SQL (fora do Prisma migrate) | n8n faz upsert direto — Prisma acessa via `@@map` sem recriar a tabela |
-| n8n responsável pelos saldos | Desacopla o fluxo de saldo do backend — sem dependência de novo cron |
+| `ad_account_balances` criada via SQL (fora do Prisma migrate) | Tabela legada do período n8n — Prisma acessa via `@@map`. Continuará sendo populada pelos novos jobs do backend |
+| n8n removido do projeto (2026-06-17) | Workflows perdidos sem backup na exclusão do desenv-01; sync volta a viver em código versionado no backend (BullMQ + Redis) |
 
 ---
 
