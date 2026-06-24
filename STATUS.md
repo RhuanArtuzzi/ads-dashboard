@@ -1,5 +1,27 @@
 # STATUS — Ominy Ads Dashboard
-**Última atualização:** 2026-05-21
+**Última atualização:** 2026-06-17
+
+---
+
+## Migração de infraestrutura (2026-06-17)
+
+O servidor `desenv-01` foi deletado pela Contabo por inadimplência. Infraestrutura reconstruída do zero em um único servidor:
+
+| Item | Antes | Agora |
+|---|---|---|
+| Servidor de app | desenv-01 (deletado) | desenv-00 |
+| Servidor de banco | worker-01 (separado) | desenv-00 (mesmo servidor) |
+| IP | 37.60.251.34 | 5.189.151.101 |
+| Domínio | artuzzyia.com.br | ominy.tec.br |
+| Rede Docker | artuzzi-net-desenv | ominy-network |
+| certresolver Traefik | letsencryptresolver | letsencrypt |
+| PostgreSQL password | SFm7MQyeZklCcYbKR | Ominy@2026!Secure |
+
+Dados perdidos: n8n e todos os workflows, Traefik antigo, containers e imagens Docker, `meta.yaml` e `.env` do servidor. Banco de dados (`ominy_ads`) **não** foi perdido pois estava no worker-01 — precisa ser migrado/restaurado para o novo banco em desenv-00 se houver backup; caso contrário, recriar via seed.
+
+Subdomínio `dashboard.ominy.tec.br` ainda não foi adicionado no Cloudflare — adicionar manualmente.
+
+Ver detalhes de workflows n8n pendentes em [N8N_WORKFLOWS_PLAN.md](N8N_WORKFLOWS_PLAN.md).
 
 ---
 
@@ -18,7 +40,7 @@
 ## Histórico
 
 ### Infraestrutura
-- `docker-compose.yml` — stack Docker Swarm com rede externa `artuzzi-net-desenv`, Traefik v2 (letsencryptresolver), placement constraint backend na desenv-01
+- `docker-compose.yml` — stack Docker Swarm com rede externa `ominy-network`, Traefik v2.11 (letsencrypt), placement constraint backend na desenv-00
 - `deploy.sh` — build das imagens + `docker stack deploy` com carregamento automático do `.env`
 - `init-db.sh` — criação do banco `ominy_ads` no postgres compartilhado do Swarm
 
@@ -43,47 +65,48 @@
 - Queries React Query v5 para todos os domínios
 
 ### Deploy em produção
-- Banco criado no `postgres_postgres` existente no Swarm (worker-01)
+- Banco criado no `postgres_postgres` existente no Swarm (desenv-00, após migração)
 - Migrations via `prisma db push` (sem shadow database)
 - Seed executado com dados mockados
 - Serviços `ads-dashboard_backend` e `ads-dashboard_frontend` rodando `1/1`
-- URLs ativas: `dashboard.artuzzyia.com.br` e `api-dashboard.artuzzyia.com.br`
+- URLs ativas: `dashboard.ominy.tec.br` e `api-dashboard.ominy.tec.br`
 
 ---
 
 ## Estado atual ao pausar
 
-Backend em crash-loop na desenv-01 — `.env` com `ANTHROPIC_API_KEY` quebrada/ausente:
-- Código commitado e pushado (branch master, commit `821b322`)
-- Imagens Docker buildadas com sucesso na desenv-01
-- Stack `ads-dashboard` deployada, mas backend reiniciando constantemente por falha de validação Zod na `ANTHROPIC_API_KEY`
-- Frontend online, mas todas as chamadas ao backend retornam erro (backend offline)
-- `/balances` retorna 404 porque o backend não sobe
+Infraestrutura reconstruída do zero em desenv-00 após exclusão da desenv-01. Código e schema Prisma não mudaram — apenas configuração de deploy (ver seção "Migração de infraestrutura" acima).
 
 ---
 
 ## Próximo passo exato para retomar
 
-O único problema é o `.env` na desenv-01 com a chave Anthropic faltando ou quebrada. Resolver assim:
-
-**Na desenv-01, execute um bloco por vez:**
+**No servidor desenv-00:**
 
 ```bash
-> ~/ads-dashboard/.env
-echo 'POSTGRES_PASSWORD=SFm7MQyeZklCcYbKR' >> ~/ads-dashboard/.env
-echo 'JWT_SECRET=1d16df324fcfea991f316ec4d4e50b689ae94f95370beccdc05cd63f4d2b85f2' >> ~/ads-dashboard/.env
-echo 'ANTHROPIC_API_KEY=sk-ant-...' >> ~/ads-dashboard/.env   # cole sua chave real aqui
-echo 'NEXT_PUBLIC_API_URL=https://api-dashboard.artuzzyia.com.br' >> ~/ads-dashboard/.env
-echo 'IA_AUTO=false' >> ~/ads-dashboard/.env
+git clone https://github.com/RhuanArtuzzi/ads-dashboard.git ~/ads-dashboard
+cd ~/ads-dashboard
+
+> .env
+echo 'POSTGRES_PASSWORD=Ominy@2026!Secure' >> .env
+echo 'JWT_SECRET=...' >> .env   # gerar novo com openssl rand -hex 32
+echo 'ANTHROPIC_API_KEY=sk-ant-...' >> .env   # cole sua chave real aqui
+echo 'NEXT_PUBLIC_API_URL=https://api-dashboard.ominy.tec.br' >> .env
+echo 'IA_AUTO=false' >> .env
 ```
 
-Depois verificar com `cat ~/ads-dashboard/.env` e rodar:
+Depois verificar com `cat .env` e rodar:
 
 ```bash
-cd ~/ads-dashboard && bash deploy.sh
+POSTGRES_PASSWORD=Ominy@2026!Secure bash init-db.sh
+bash deploy.sh
 ```
 
-Após o deploy, confirmar que a seção "Saldos das Contas" aparece na home de `dashboard.artuzzyia.com.br`.
+Adicionar no Cloudflare os registros DNS (`A`, DNS only) apontando para `5.189.151.101`:
+- `dashboard.ominy.tec.br`
+- `api-dashboard.ominy.tec.br`
+
+Após o deploy, confirmar que a seção "Saldos das Contas" aparece na home de `dashboard.ominy.tec.br`. Nota: o saldo vai aparecer vazio até o workflow n8n ser recriado (ver [N8N_WORKFLOWS_PLAN.md](N8N_WORKFLOWS_PLAN.md)).
 
 ---
 
@@ -97,7 +120,7 @@ Após o deploy, confirmar que a seção "Saldos das Contas" aparece na home de `
 | Access token no banco (ContaAds.accessToken) | Evita editar arquivo YAML no servidor — gerenciado pela UI |
 | YAML como fallback opcional | Compatibilidade com configuração antiga, sem quebrar nada |
 | `IA_AUTO=false` por padrão | Evitar gasto desnecessário de tokens Anthropic |
-| Placement constraint `node.hostname == desenv-01` | Config bind mount só existe na desenv-01, não no worker-01 |
+| Placement constraint `node.hostname == desenv-00` | Config bind mount só existe na desenv-00 (servidor único após migração) |
 | Reutilizar `postgres_postgres` e `redis_redis` | Serviços já existentes no Swarm — sem criar containers extras |
 | `ad_account_balances` criada via SQL (fora do Prisma migrate) | n8n faz upsert direto — Prisma acessa via `@@map` sem recriar a tabela |
 | n8n responsável pelos saldos | Desacopla o fluxo de saldo do backend — sem dependência de novo cron |

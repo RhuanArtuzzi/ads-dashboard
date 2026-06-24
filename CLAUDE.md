@@ -19,6 +19,10 @@ redis       → Cache de métricas (TTL 1h) via ioredis
 
 Tudo orquestrado via `docker-compose.yml` na raiz.
 
+Infraestrutura: Docker Swarm no desenv-00 (5.189.151.101)
+Rede: ominy-network (overlay, external)
+Traefik: v2.11 (stack separada, já rodando no servidor)
+
 ## Running the Project
 
 ```bash
@@ -89,3 +93,5 @@ cd backend && npx prisma db seed
 Copiar `.env.example` para `.env`. Segredos da Meta API ficam em `backend/config/meta.yaml` (não em `.env`).
 
 Variáveis obrigatórias: `POSTGRES_PASSWORD`, `JWT_SECRET`, `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_API_URL`.
+
+`NEXT_PUBLIC_API_URL` em produção: `https://api-dashboard.ominy.tec.br`.

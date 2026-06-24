@@ -1,6 +1,6 @@
 #!/bin/bash
 # Cria o banco ominy_ads dentro do postgres_postgres existente
-# Executar na desenv-01 ANTES do primeiro deploy
+# Executar na desenv-00 ANTES do primeiro deploy
 
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-""}
 

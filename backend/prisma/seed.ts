@@ -126,6 +126,19 @@ Sugestoes do gestor:
     },
   })
 
+  // Saldos mockados das contas (normalmente populados pelo n8n)
+  await prisma.adAccountBalance.upsert({
+    where: { platform_accountId: { platform: 'META_ADS', accountId: 'act_111111111' } },
+    update: { accountName: 'Loja Alpha — Meta', balance: 1250.75, currency: 'BRL', updatedAt: new Date() },
+    create: { platform: 'META_ADS', accountId: 'act_111111111', accountName: 'Loja Alpha — Meta', balance: 1250.75, currency: 'BRL' },
+  })
+
+  await prisma.adAccountBalance.upsert({
+    where: { platform_accountId: { platform: 'META_ADS', accountId: 'act_222222222' } },
+    update: { accountName: 'Studio Beta — Meta', balance: 380.20, currency: 'BRL', updatedAt: new Date() },
+    create: { platform: 'META_ADS', accountId: 'act_222222222', accountName: 'Studio Beta — Meta', balance: 380.20, currency: 'BRL' },
+  })
+
   console.log('Seed concluido!')
 }
 

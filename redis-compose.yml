@@ -1,0 +1,17 @@
+# Stack do Redis compartilhado — deploy com: docker stack deploy -c redis-compose.yml redis
+services:
+  redis:
+    image: redis:7.4.3
+    networks:
+      - ominy-network
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == desenv-00
+      restart_policy:
+        condition: on-failure
+
+networks:
+  ominy-network:
+    external: true

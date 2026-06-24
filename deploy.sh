@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script de build e deploy para Docker Swarm
-# Executar na desenv-01: bash deploy.sh
+# Executar na desenv-00: bash deploy.sh
 
 set -e
 
@@ -9,7 +9,7 @@ docker build -t ominy-ads-backend:latest ./backend
 
 echo "==> Buildando frontend..."
 docker build \
-  --build-arg NEXT_PUBLIC_API_URL=https://api-dashboard.artuzzyia.com.br \
+  --build-arg NEXT_PUBLIC_API_URL=https://api-dashboard.ominy.tec.br \
   -t ominy-ads-frontend:latest \
   ./frontend
 
@@ -30,5 +30,5 @@ echo "==> Deploying stack ads-dashboard..."
 docker stack deploy -c docker-compose.yml ads-dashboard --with-registry-auth
 
 echo "==> Deploy concluído!"
-echo "    Frontend: https://dashboard.artuzzyia.com.br"
-echo "    Backend:  https://api-dashboard.artuzzyia.com.br"
+echo "    Frontend: https://dashboard.ominy.tec.br"
+echo "    Backend:  https://api-dashboard.ominy.tec.br"

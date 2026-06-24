@@ -48,7 +48,7 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
   // GET /metricas/grafico — dados para gráfico de linha
   app.get('/grafico', async (request) => {
     const q = request.query as { periodo?: string }
-    const dias = q.periodo === '7d' ? 7 : 30
+    const dias = q.periodo === 'hoje' ? 0 : q.periodo === '7d' ? 7 : 30
     const dataInicio = diasAtras(dias)
 
     const snapshots = await prisma.snapshotConta.findMany({
