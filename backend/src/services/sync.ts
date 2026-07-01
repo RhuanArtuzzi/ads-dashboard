@@ -184,9 +184,9 @@ export async function sincronizarSaldos(): Promise<{ sucesso: number; erro: numb
       try {
         const { name, balance, currency } = await buscarSaldoConta(conta.accountId, token, apiVersion)
         await prisma.adAccountBalance.upsert({
-          where: { platform_accountId: { platform: 'meta', accountId: conta.accountId } },
+          where: { platform_accountId: { platform: 'META_ADS', accountId: conta.accountId } },
           update: { accountName: name, balance, currency, updatedAt: new Date() },
-          create: { platform: 'meta', accountId: conta.accountId, accountName: name, balance, currency },
+          create: { platform: 'META_ADS', accountId: conta.accountId, accountName: name, balance, currency },
         })
         sucesso++
       } catch (e) {

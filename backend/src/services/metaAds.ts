@@ -36,13 +36,14 @@ export function carregarConfigMeta(): MetaConfig {
   return yaml.load(raw) as MetaConfig
 }
 
+// accountId no banco ja inclui o prefixo act_ (ex: act_143086142456612)
 export async function buscarInsights(
   accountId: string,
   accessToken: string,
   apiVersion: string,
   datePreset = 'today'
 ): Promise<InsightCampanha[]> {
-  const url = `https://graph.facebook.com/${apiVersion}/act_${accountId}/insights`
+  const url = `https://graph.facebook.com/${apiVersion}/${accountId}/insights`
   const { data } = await axios.get(url, {
     params: {
       fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,actions',
@@ -60,7 +61,7 @@ export async function buscarCampanhas(
   accessToken: string,
   apiVersion: string
 ): Promise<Array<{ id: string; name: string; status: string; daily_budget?: string }>> {
-  const url = `https://graph.facebook.com/${apiVersion}/act_${accountId}/campaigns`
+  const url = `https://graph.facebook.com/${apiVersion}/${accountId}/campaigns`
   const { data } = await axios.get(url, {
     params: {
       fields: 'id,name,status,daily_budget',
@@ -76,10 +77,11 @@ export async function buscarSaldoConta(
   accessToken: string,
   apiVersion: string
 ): Promise<{ name: string; balance: number; currency: string }> {
-  const url = `https://graph.facebook.com/${apiVersion}/act_${accountId}`
+  const url = `https://graph.facebook.com/${apiVersion}/${accountId}`
   const { data } = await axios.get(url, {
     params: { fields: 'id,name,balance,currency', access_token: accessToken },
   })
+  if (data.error) throw new Error(`Meta API: ${data.error.message}`)
   return { name: data.name, balance: parseFloat(data.balance ?? '0') / 100, currency: data.currency ?? 'BRL' }
 }
 
