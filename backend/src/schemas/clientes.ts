@@ -12,7 +12,7 @@ export const contaCreateSchema = z.object({
   clienteId: z.string().min(1),
   accountId: z.string().min(1),
   accountName: z.string().min(1),
-  accessToken: z.string().min(10).optional(),
+  accessToken: z.preprocess(v => (v === '' || v == null) ? undefined : v, z.string().min(10).optional()),
   plataforma: z.enum(['META_ADS', 'GOOGLE_ADS']).default('META_ADS'),
 }).refine(
   (data) => data.plataforma === 'GOOGLE_ADS' || (data.accessToken && data.accessToken.length >= 10),
