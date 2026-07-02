@@ -48,6 +48,7 @@ model ContaAds {
 
 enum Plataforma {
   META_ADS
+  GOOGLE_ADS
 }
 
 model Campanha {

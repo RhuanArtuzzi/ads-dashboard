@@ -6,6 +6,7 @@ import {
   buscarSaldoConta,
   extrairConversoes,
 } from './metaAds.js'
+import { buscarSaldoGoogleAds, buscarMetricasGoogleAds } from './googleAds.js'
 import { verificarAlertas, alertarFalhaSync } from './alertas.js'
 import fs from 'fs'
 import path from 'path'
@@ -198,5 +199,69 @@ export async function sincronizarSaldos(): Promise<{ sucesso: number; erro: numb
     })
   )
 
+  return { sucesso, erro, erros }
+}
+
+export async function sincronizarSaldosGoogle(): Promise<{ sucesso: number; erro: number; erros: string[] }> {
+  const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'GOOGLE_ADS' } })
+  let sucesso = 0, erro = 0
+  const erros: string[] = []
+
+  await Promise.allSettled(
+    contas.map(async (conta) => {
+      try {
+        const { balance, currency } = await buscarSaldoGoogleAds(conta.accountId)
+        await prisma.adAccountBalance.upsert({
+          where: { platform_accountId: { platform: 'GOOGLE_ADS', accountId: conta.accountId } },
+          update: { accountName: conta.accountName, balance, currency, updatedAt: new Date() },
+          create: { platform: 'GOOGLE_ADS', accountId: conta.accountId, accountName: conta.accountName, balance, currency },
+        })
+        sucesso++
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        erros.push(`Erro ao buscar saldo Google Ads de ${conta.accountName}: ${msg}`)
+        await alertarFalhaSync(conta.clienteId, `Falha ao sincronizar saldo Google Ads da conta "${conta.accountName}": ${msg}`)
+        erro++
+      }
+    })
+  )
+  return { sucesso, erro, erros }
+}
+
+export async function sincronizarMetricasGoogle(): Promise<{ sucesso: number; erro: number; erros: string[] }> {
+  const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'GOOGLE_ADS' } })
+  let sucesso = 0, erro = 0
+  const erros: string[] = []
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+
+  await Promise.allSettled(
+    contas.map(async (conta) => {
+      try {
+        const metricas = await buscarMetricasGoogleAds(conta.accountId)
+        for (const m of metricas) {
+          const campanha = await prisma.campanha.upsert({
+            where: { campanhaIdPlataforma_contaId: { campanhaIdPlataforma: m.campaignId, contaId: conta.id } },
+            update: { nome: m.campaignName, atualizadoEm: new Date() },
+            create: { contaId: conta.id, campanhaIdPlataforma: m.campaignId, nome: m.campaignName, status: 'ATIVA' },
+          })
+          const cpl = m.conversoes > 0 ? m.gasto / m.conversoes : null
+          await prisma.snapshotCampanha.upsert({
+            where: { campanhaId_data: { campanhaId: campanha.id, data: hoje } },
+            update: { gasto: m.gasto, impressoes: m.impressoes, cliques: m.cliques, conversoes: m.conversoes, cpl, roas: m.roas, ctr: m.ctr },
+            create: { campanhaId: campanha.id, data: hoje, gasto: m.gasto, impressoes: m.impressoes, cliques: m.cliques, conversoes: m.conversoes, cpl, roas: m.roas, ctr: m.ctr },
+          })
+        }
+        await prisma.contaAds.update({ where: { id: conta.id }, data: { ultimoSync: new Date() } })
+        await verificarAlertas(conta.id)
+        sucesso++
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        erros.push(`Erro ao buscar métricas Google Ads de ${conta.accountName}: ${msg}`)
+        await alertarFalhaSync(conta.clienteId, `Falha ao sincronizar métricas Google Ads da conta "${conta.accountName}": ${msg}`)
+        erro++
+      }
+    })
+  )
   return { sucesso, erro, erros }
 }
