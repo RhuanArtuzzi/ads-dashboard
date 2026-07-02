@@ -144,7 +144,11 @@ export default function ConexoesPage() {
                 Cancelar
               </Button>
               <Button
-                onClick={() => criar.mutate(novoForm, { onSuccess: () => { setMostrarNovo(false); setNovoForm(formVazio) } })}
+                onClick={() => {
+                  const payload: any = { ...novoForm }
+                  if (!payload.accessToken) delete payload.accessToken
+                  criar.mutate(payload, { onSuccess: () => { setMostrarNovo(false); setNovoForm(formVazio) } })
+                }}
                 disabled={!novoForm.clienteId || !novoForm.accountId || !novoForm.accountName || (novoForm.plataforma === 'META_ADS' && !novoForm.accessToken) || criar.isPending}
               >
                 {criar.isPending ? 'Salvando...' : 'Adicionar conta'}
