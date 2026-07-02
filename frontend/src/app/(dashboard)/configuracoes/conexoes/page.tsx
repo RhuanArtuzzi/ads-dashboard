@@ -139,8 +139,13 @@ export default function ConexoesPage() {
             {novoForm.plataforma === 'GOOGLE_ADS' && (
               <p className="text-xs text-ominy-muted">Google Ads usa as credenciais OAuth configuradas no servidor — sem token adicional necessário.</p>
             )}
+            {criar.isError && (
+              <p className="text-xs text-red-400">
+                Erro: {(criar.error as any)?.response?.data?.error ?? 'Falha ao salvar conta'}
+              </p>
+            )}
             <div className="flex gap-2 justify-end">
-              <Button variant="ghost" onClick={() => { setMostrarNovo(false); setNovoForm(formVazio) }}>
+              <Button variant="ghost" onClick={() => { setMostrarNovo(false); setNovoForm(formVazio); criar.reset() }}>
                 Cancelar
               </Button>
               <Button

@@ -1,5 +1,24 @@
 # Plano de Workflows n8n — Ominy Ads Dashboard
 
+> **ARQUIVO OBSOLETO** — n8n foi removido do projeto. Ver `STATUS.md` e memória do projeto.
+
+---
+
+## Funcionalidade futura pendente: OAuth2 Google Ads por cliente (Opção B)
+
+**Contexto:** O modelo atual armazena credenciais Google Ads no `.env` do servidor (uma única MCC). Não escala para múltiplos clientes com MCCs distintas.
+
+**O que implementar:**
+- Botão "Conectar com Google" na tela de Conexões para contas Google Ads
+- Backend: endpoint `GET /auth/google/callback` que recebe o `code` do OAuth2, troca por `refresh_token`, salva criptografado no banco (model `Cliente` ou nova tabela `GoogleAdsConfig`)
+- Cada cliente tem seu próprio conjunto de credenciais (`clientId`, `clientSecret`, `refreshToken`, `developerToken`, `loginCustomerId`) no banco
+- Backend usa credenciais do cliente específico ao fazer sync, sem depender do `.env`
+- Redirect URI: `https://api-dashboard.ominy.tec.br/auth/google/callback`
+
+**Quando implementar:** antes de onboarding do segundo cliente com Google Ads diferente do MCC atual.
+
+---
+
 ## Estado atual
 
 | Dado | Workflow | Status |

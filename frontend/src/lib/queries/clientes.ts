@@ -25,7 +25,7 @@ export function useContasConfig() {
 export function useCriarConta() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { clienteId: string; accountId: string; accountName: string; accessToken: string }) =>
+    mutationFn: (data: { clienteId: string; accountId: string; accountName: string; accessToken?: string; plataforma?: string }) =>
       api.post('/clientes/contas', data).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contas'] })
