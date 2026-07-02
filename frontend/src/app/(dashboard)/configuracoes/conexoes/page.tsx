@@ -12,9 +12,10 @@ interface ContaForm {
   accountId: string
   accountName: string
   accessToken: string
+  plataforma: 'META_ADS' | 'GOOGLE_ADS'
 }
 
-const formVazio: ContaForm = { clienteId: '', accountId: '', accountName: '', accessToken: '' }
+const formVazio: ContaForm = { clienteId: '', accountId: '', accountName: '', accessToken: '', plataforma: 'META_ADS' }
 
 export default function ConexoesPage() {
   const { data: contas } = useContas()
@@ -44,7 +45,7 @@ export default function ConexoesPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold">Contas Meta Ads</h1>
+        <h1 className="font-heading text-2xl font-bold">Contas de Ads</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setMostrarNovo(!mostrarNovo)}>
             <Plus size={14} />
@@ -77,24 +78,39 @@ export default function ConexoesPage() {
         <Card glow>
           <h2 className="font-heading text-sm text-ominy-cyan uppercase tracking-widest mb-4">Nova Conta</h2>
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-ominy-muted uppercase tracking-widest">Cliente</label>
-              <select
-                className="w-full px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm focus:outline-none focus:border-ominy-cyan"
-                value={novoForm.clienteId}
-                onChange={(e) => setNovoForm({ ...novoForm, clienteId: e.target.value })}
-              >
-                <option value="">Selecione o cliente...</option>
-                {(clientes ?? []).map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-ominy-muted uppercase tracking-widest">Cliente</label>
+                <select
+                  className="w-full px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm focus:outline-none focus:border-ominy-cyan"
+                  value={novoForm.clienteId}
+                  onChange={(e) => setNovoForm({ ...novoForm, clienteId: e.target.value })}
+                >
+                  <option value="">Selecione o cliente...</option>
+                  {(clientes ?? []).map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-ominy-muted uppercase tracking-widest">Plataforma</label>
+                <select
+                  className="w-full px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm focus:outline-none focus:border-ominy-cyan"
+                  value={novoForm.plataforma}
+                  onChange={(e) => setNovoForm({ ...novoForm, plataforma: e.target.value as 'META_ADS' | 'GOOGLE_ADS', accessToken: '' })}
+                >
+                  <option value="META_ADS">Meta Ads</option>
+                  <option value="GOOGLE_ADS">Google Ads</option>
+                </select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-ominy-muted uppercase tracking-widest">Account ID</label>
+                <label className="text-xs text-ominy-muted uppercase tracking-widest">
+                  {novoForm.plataforma === 'GOOGLE_ADS' ? 'Customer ID' : 'Account ID'}
+                </label>
                 <Input
-                  placeholder="act_123456789"
+                  placeholder={novoForm.plataforma === 'GOOGLE_ADS' ? '8333093413' : 'act_123456789'}
                   value={novoForm.accountId}
                   onChange={(e) => setNovoForm({ ...novoForm, accountId: e.target.value })}
                 />
@@ -102,29 +118,34 @@ export default function ConexoesPage() {
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-ominy-muted uppercase tracking-widest">Nome da Conta</label>
                 <Input
-                  placeholder="Ex: Cliente A — Meta"
+                  placeholder={novoForm.plataforma === 'GOOGLE_ADS' ? 'Ex: Cliente A — Google' : 'Ex: Cliente A — Meta'}
                   value={novoForm.accountName}
                   onChange={(e) => setNovoForm({ ...novoForm, accountName: e.target.value })}
                 />
               </div>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-ominy-muted uppercase tracking-widest">Access Token</label>
-              <Input
-                type="password"
-                placeholder="EAAxxxx... (token de longa duração)"
-                value={novoForm.accessToken}
-                onChange={(e) => setNovoForm({ ...novoForm, accessToken: e.target.value })}
-              />
-              <p className="text-xs text-ominy-muted">Token de longa duração do Meta Business Manager (validade 60 dias)</p>
-            </div>
+            {novoForm.plataforma === 'META_ADS' && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-ominy-muted uppercase tracking-widest">Access Token</label>
+                <Input
+                  type="password"
+                  placeholder="EAAxxxx... (token de longa duração)"
+                  value={novoForm.accessToken}
+                  onChange={(e) => setNovoForm({ ...novoForm, accessToken: e.target.value })}
+                />
+                <p className="text-xs text-ominy-muted">Token de longa duração do Meta Business Manager (validade 60 dias)</p>
+              </div>
+            )}
+            {novoForm.plataforma === 'GOOGLE_ADS' && (
+              <p className="text-xs text-ominy-muted">Google Ads usa as credenciais OAuth configuradas no servidor — sem token adicional necessário.</p>
+            )}
             <div className="flex gap-2 justify-end">
               <Button variant="ghost" onClick={() => { setMostrarNovo(false); setNovoForm(formVazio) }}>
                 Cancelar
               </Button>
               <Button
                 onClick={() => criar.mutate(novoForm, { onSuccess: () => { setMostrarNovo(false); setNovoForm(formVazio) } })}
-                disabled={!novoForm.clienteId || !novoForm.accountId || !novoForm.accountName || !novoForm.accessToken || criar.isPending}
+                disabled={!novoForm.clienteId || !novoForm.accountId || !novoForm.accountName || (novoForm.plataforma === 'META_ADS' && !novoForm.accessToken) || criar.isPending}
               >
                 {criar.isPending ? 'Salvando...' : 'Adicionar conta'}
               </Button>

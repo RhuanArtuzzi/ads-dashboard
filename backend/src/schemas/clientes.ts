@@ -12,9 +12,12 @@ export const contaCreateSchema = z.object({
   clienteId: z.string().min(1),
   accountId: z.string().min(1),
   accountName: z.string().min(1),
-  accessToken: z.string().min(10),
-  plataforma: z.enum(['META_ADS']).default('META_ADS'),
-})
+  accessToken: z.string().min(10).optional(),
+  plataforma: z.enum(['META_ADS', 'GOOGLE_ADS']).default('META_ADS'),
+}).refine(
+  (data) => data.plataforma === 'GOOGLE_ADS' || (data.accessToken && data.accessToken.length >= 10),
+  { message: 'Access token obrigatório para Meta Ads', path: ['accessToken'] }
+)
 
 export const contaUpdateSchema = z.object({
   accountName: z.string().min(1).optional(),
