@@ -118,7 +118,7 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
 }
 
 export async function sincronizarTodas(): Promise<{ sucesso: number; erro: number; erros: string[] }> {
-  const contas = await prisma.contaAds.findMany({ where: { ativa: true } })
+  const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'META_ADS' } })
   const apiVersion = 'v20.0'
 
   // Carrega YAML como fallback (opcional)
