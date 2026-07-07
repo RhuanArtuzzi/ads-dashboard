@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Ominy Ads Dashboard** — dashboard de análise inteligente de campanhas Meta Ads para agências de marketing. Arquitetura separada: frontend Next.js + backend Fastify (Node.js), comunicando via REST API. Um agente LangChain.js (ReAct) age como gestor de tráfego experiente para análise das métricas.
+**Ominy Ads Dashboard** — dashboard de análise inteligente de campanhas Meta Ads e Google Ads para agências de marketing. Arquitetura separada: frontend Next.js + backend Fastify (Node.js), comunicando via REST API. Um agente LangChain.js (ReAct) age como gestor de tráfego experiente para análise das métricas.
+
+> **Roadmap e decisões de produto:** consulte [`docs/ROADMAP.md`](docs/ROADMAP.md) antes de iniciar qualquer nova feature.
 
 **Linguagem:** TypeScript em todo o projeto (frontend e backend). Sem Python.
 
@@ -94,4 +96,10 @@ Copiar `.env.example` para `.env`. Segredos da Meta API ficam em `backend/config
 
 Variáveis obrigatórias: `POSTGRES_PASSWORD`, `JWT_SECRET`, `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_API_URL`.
 
+Google Ads (opcionais, necessárias para sync Google): `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_REFRESH_TOKEN`, `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_LOGIN_CUSTOMER_ID`.
+
 `NEXT_PUBLIC_API_URL` em produção: `https://api-dashboard.ominy.tec.br`.
+
+## Deploy
+
+**Sempre usar `bash deploy.sh`** no VPS. O script faz git pull, source .env, build com --build-arg correto, stack deploy e --force nos containers. Nunca rodar `docker stack deploy` direto.

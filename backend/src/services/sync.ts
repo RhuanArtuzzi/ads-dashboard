@@ -6,7 +6,7 @@ import {
   buscarSaldoConta,
   extrairConversoes,
 } from './metaAds.js'
-import { buscarSaldoGoogleAds, buscarMetricasGoogleAds } from './googleAds.js'
+import { buscarSaldoGoogleAds, buscarMetricasGoogleAds, listarSubContasGoogle } from './googleAds.js'
 import { verificarAlertas, alertarFalhaSync } from './alertas.js'
 import fs from 'fs'
 import path from 'path'
@@ -202,7 +202,25 @@ export async function sincronizarSaldos(): Promise<{ sucesso: number; erro: numb
   return { sucesso, erro, erros }
 }
 
+async function descobrirEUpsertSubContasGoogle(): Promise<void> {
+  const subContas = await listarSubContasGoogle()
+  for (const sub of subContas) {
+    const existing = await prisma.contaAds.findFirst({
+      where: { accountId: sub.customerId, plataforma: 'GOOGLE_ADS' },
+    })
+    if (existing) continue
+    let cliente = await prisma.cliente.findFirst({ where: { nome: sub.name } })
+    if (!cliente) {
+      cliente = await prisma.cliente.create({ data: { nome: sub.name } })
+    }
+    await prisma.contaAds.create({
+      data: { clienteId: cliente.id, plataforma: 'GOOGLE_ADS', accountId: sub.customerId, accountName: sub.name },
+    })
+  }
+}
+
 export async function sincronizarSaldosGoogle(): Promise<{ sucesso: number; erro: number; erros: string[] }> {
+  await descobrirEUpsertSubContasGoogle()
   const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'GOOGLE_ADS' } })
   let sucesso = 0, erro = 0
   const erros: string[] = []
@@ -229,6 +247,7 @@ export async function sincronizarSaldosGoogle(): Promise<{ sucesso: number; erro
 }
 
 export async function sincronizarMetricasGoogle(): Promise<{ sucesso: number; erro: number; erros: string[] }> {
+  await descobrirEUpsertSubContasGoogle()
   const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'GOOGLE_ADS' } })
   let sucesso = 0, erro = 0
   const erros: string[] = []

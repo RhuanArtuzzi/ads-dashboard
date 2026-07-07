@@ -47,6 +47,45 @@ function buildHeaders(accessToken: string, creds: GoogleAdsTokens) {
   return headers
 }
 
+export interface GoogleAdsSubConta {
+  customerId: string
+  name: string
+}
+
+export async function listarSubContasGoogle(): Promise<GoogleAdsSubConta[]> {
+  const creds = getCredentials()
+  if (!creds.loginCustomerId) return []
+
+  const accessToken = await obterAccessToken(creds)
+  const headers = buildHeaders(accessToken, creds)
+
+  const query = `
+    SELECT customer_client.client_customer, customer_client.descriptive_name, customer_client.manager
+    FROM customer_client
+    WHERE customer_client.level = 1
+      AND customer_client.status = 'ENABLED'
+  `
+
+  const cleanMccId = creds.loginCustomerId.replace(/-/g, '')
+  try {
+    const { data } = await axios.post(
+      `https://googleads.googleapis.com/v18/customers/${cleanMccId}/googleAds:search`,
+      { query },
+      { headers }
+    )
+    const rows: any[] = data.results ?? []
+    return rows
+      .filter((r: any) => !r.customerClient?.manager)
+      .map((r: any) => ({
+        customerId: (r.customerClient?.clientCustomer ?? '').replace('customers/', ''),
+        name: r.customerClient?.descriptiveName ?? 'Conta Google Ads',
+      }))
+      .filter((r) => r.customerId)
+  } catch {
+    return []
+  }
+}
+
 export interface GoogleAdsCampanhaMetrics {
   campaignId: string
   campaignName: string
