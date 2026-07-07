@@ -78,15 +78,21 @@ export async function buscarSaldoGoogleAds(customerId: string): Promise<{ balanc
   `
 
   const cleanId = customerId.replace(/-/g, '')
-  const { data } = await axios.post(
-    `https://googleads.googleapis.com/v18/customers/${cleanId}/googleAds:search`,
-    { query: budgetQuery },
-    { headers }
-  )
+  let rows: any[] = []
+  try {
+    const { data } = await axios.post(
+      `https://googleads.googleapis.com/v18/customers/${cleanId}/googleAds:search`,
+      { query: budgetQuery },
+      { headers }
+    )
+    rows = data.results ?? []
+  } catch (e: any) {
+    // MCC accounts have no direct campaign budgets — return 0 instead of failing
+    if (e?.response?.status === 404) return { balance: 0, currency: 'BRL' }
+    throw e
+  }
 
-  const rows = data.results ?? []
   const totalMicros = rows.reduce((sum: number, r: any) => sum + (r.campaignBudget?.amountMicros ?? 0), 0)
-
   return { balance: totalMicros / 1_000_000, currency: 'BRL' }
 }
 
