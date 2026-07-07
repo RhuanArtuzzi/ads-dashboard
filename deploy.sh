@@ -1,8 +1,18 @@
 #!/bin/bash
 # Script de build e deploy para Docker Swarm
-# Executar na desenv-00: bash deploy.sh
+# Executar de qualquer lugar: bash ~/ads-dashboard/deploy.sh
 
 set -e
+
+cd ~/ads-dashboard
+
+echo "==> Carregando variáveis de ambiente..."
+set -a
+source .env
+set +a
+
+echo "==> Atualizando código..."
+git pull
 
 echo "==> Buildando backend..."
 docker build -t ominy-ads-backend:latest ./backend
@@ -20,11 +30,6 @@ if [ ! -f /opt/ads-dashboard/config/meta.yaml ]; then
   cp ./backend/config/meta.yaml.example /opt/ads-dashboard/config/meta.yaml
   echo "ATENÇÃO: Edite /opt/ads-dashboard/config/meta.yaml com suas chaves do Meta Ads"
 fi
-
-echo "==> Carregando variáveis de ambiente..."
-set -a
-source .env
-set +a
 
 echo "==> Deploying stack ads-dashboard..."
 docker stack deploy -c docker-compose.yml ads-dashboard --with-registry-auth
