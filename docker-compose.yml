@@ -5,7 +5,7 @@ services:
   backend:
     image: ominy-ads-backend:latest
     environment:
-      DATABASE_URL: postgresql://ominy:${POSTGRES_PASSWORD}@postgres_postgres:5432/ominy_ads
+      DATABASE_URL: postgresql://ominy:${POSTGRES_PASSWORD}@postgres_postgres:5432/ominy_ads?connection_limit=5&pool_timeout=10&connect_timeout=10
       REDIS_URL: redis://redis_redis:6379
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       JWT_SECRET: ${JWT_SECRET}
