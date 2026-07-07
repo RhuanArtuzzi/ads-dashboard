@@ -25,7 +25,9 @@ interface InsightCampanha {
   impressions: string
   clicks: string
   ctr: string
+  reach?: string
   actions?: Array<{ action_type: string; value: string }>
+  action_values?: Array<{ action_type: string; value: string }>
   date_start: string
   date_stop: string
 }
@@ -46,7 +48,7 @@ export async function buscarInsights(
   const url = `https://graph.facebook.com/${apiVersion}/${accountId}/insights`
   const { data } = await axios.get(url, {
     params: {
-      fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,actions',
+      fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,reach,actions,action_values',
       date_preset: datePreset,
       level: 'campaign',
       access_token: accessToken,
@@ -87,7 +89,16 @@ export async function buscarSaldoConta(
 
 export function extrairConversoes(actions: InsightCampanha['actions']): number {
   if (!actions) return 0
-  const convTypes = ['lead', 'offsite_conversion.fb_pixel_lead', 'omni_lead']
-  const conv = actions.find((a) => convTypes.includes(a.action_type))
-  return conv ? parseInt(conv.value) : 0
+  const convTypes = ['lead', 'offsite_conversion.fb_pixel_lead', 'omni_lead', 'purchase', 'offsite_conversion.fb_pixel_purchase', 'omni_purchase']
+  return actions
+    .filter((a) => convTypes.includes(a.action_type))
+    .reduce((s, a) => s + parseInt(a.value || '0'), 0)
+}
+
+export function extrairValorConversao(actionValues: InsightCampanha['action_values']): number {
+  if (!actionValues) return 0
+  const valueTypes = ['purchase', 'offsite_conversion.fb_pixel_purchase', 'omni_purchase', 'lead', 'omni_lead']
+  return actionValues
+    .filter((a) => valueTypes.includes(a.action_type))
+    .reduce((s, a) => s + parseFloat(a.value || '0'), 0)
 }

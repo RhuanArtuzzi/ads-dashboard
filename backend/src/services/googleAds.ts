@@ -94,6 +94,7 @@ export interface GoogleAdsCampanhaMetrics {
   cliques: number
   ctr: number
   conversoes: number
+  valorConversao: number
   roas: number | null
 }
 
@@ -167,7 +168,7 @@ export async function buscarMetricasGoogleAds(customerId: string): Promise<Googl
   return rows.map((r: any) => {
     const gasto = (r.metrics?.costMicros ?? 0) / 1_000_000
     const conversoes = r.metrics?.conversions ?? 0
-    const allConversionsValue = r.metrics?.allConversionsValue ?? 0
+    const valorConversao = r.metrics?.allConversionsValue ?? 0
     return {
       campaignId: r.campaign.id,
       campaignName: r.campaign.name,
@@ -176,7 +177,8 @@ export async function buscarMetricasGoogleAds(customerId: string): Promise<Googl
       cliques: r.metrics?.clicks ?? 0,
       ctr: (r.metrics?.ctr ?? 0) * 100,
       conversoes,
-      roas: gasto > 0 && allConversionsValue > 0 ? allConversionsValue / gasto : null,
+      valorConversao,
+      roas: gasto > 0 && valorConversao > 0 ? parseFloat((valorConversao / gasto).toFixed(2)) : null,
     }
   })
 }

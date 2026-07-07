@@ -5,6 +5,7 @@ import {
   buscarCampanhas,
   buscarSaldoConta,
   extrairConversoes,
+  extrairValorConversao,
 } from './metaAds.js'
 import { buscarSaldoGoogleAds, buscarMetricasGoogleAds, listarSubContasGoogle } from './googleAds.js'
 import { verificarAlertas, alertarFalhaSync } from './alertas.js'
@@ -45,20 +46,26 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
   let impressoesTotal = 0
   let cliquesTotal = 0
   let conversoesTotal = 0
+  let alcanceTotal = 0
+  let valorConversaoTotal = 0
 
   for (const insight of insights) {
     const gasto = parseFloat(insight.spend ?? '0')
     const impressoes = parseInt(insight.impressions ?? '0')
     const cliques = parseInt(insight.clicks ?? '0')
+    const alcance = parseInt(insight.reach ?? '0')
     const conversoes = extrairConversoes(insight.actions)
+    const valorConversao = extrairValorConversao(insight.action_values)
     const ctr = parseFloat(insight.ctr ?? '0')
     const cpl = conversoes > 0 ? gasto / conversoes : null
-    const roas = null // Meta API não retorna ROAS diretamente no MVP
+    const roas = valorConversao > 0 && gasto > 0 ? parseFloat((valorConversao / gasto).toFixed(2)) : null
 
     gastoTotal += gasto
     impressoesTotal += impressoes
     cliquesTotal += cliques
     conversoesTotal += conversoes
+    alcanceTotal += alcance
+    valorConversaoTotal += valorConversao
 
     // Upsert campanha
     const campanhaInfo = campanhasApi.find((c) => c.id === insight.campaign_id)
@@ -82,13 +89,14 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
     // Upsert snapshot campanha
     await prisma.snapshotCampanha.upsert({
       where: { campanhaId_data: { campanhaId: campanha.id, data: hoje } },
-      update: { gasto, impressoes, cliques, conversoes, cpl, roas, ctr },
-      create: { campanhaId: campanha.id, data: hoje, gasto, impressoes, cliques, conversoes, cpl, roas, ctr },
+      update: { gasto, impressoes, cliques, conversoes, cpl, roas, ctr, alcance, valorConversao },
+      create: { campanhaId: campanha.id, data: hoje, gasto, impressoes, cliques, conversoes, cpl, roas, ctr, alcance, valorConversao },
     })
   }
 
   const cplConta = conversoesTotal > 0 ? gastoTotal / conversoesTotal : null
   const ctrConta = impressoesTotal > 0 ? (cliquesTotal / impressoesTotal) * 100 : null
+  const roasConta = valorConversaoTotal > 0 && gastoTotal > 0 ? parseFloat((valorConversaoTotal / gastoTotal).toFixed(2)) : null
 
   // Upsert snapshot conta
   await prisma.snapshotConta.upsert({
@@ -100,6 +108,9 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
       conversoes: conversoesTotal,
       cpl: cplConta,
       ctr: ctrConta,
+      roas: roasConta,
+      alcance: alcanceTotal,
+      valorConversao: valorConversaoTotal,
     },
     create: {
       contaId,
@@ -110,6 +121,9 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
       conversoes: conversoesTotal,
       cpl: cplConta,
       ctr: ctrConta,
+      roas: roasConta,
+      alcance: alcanceTotal,
+      valorConversao: valorConversaoTotal,
     },
   })
 
@@ -258,6 +272,7 @@ export async function sincronizarMetricasGoogle(): Promise<{ sucesso: number; er
     contas.map(async (conta) => {
       try {
         const metricas = await buscarMetricasGoogleAds(conta.accountId)
+        let gastoTotal = 0, impressoesTotal = 0, cliquesTotal = 0, conversoesTotal = 0, valorConversaoTotal = 0
         for (const m of metricas) {
           const campanha = await prisma.campanha.upsert({
             where: { campanhaIdPlataforma_contaId: { campanhaIdPlataforma: m.campaignId, contaId: conta.id } },
@@ -267,10 +282,24 @@ export async function sincronizarMetricasGoogle(): Promise<{ sucesso: number; er
           const cpl = m.conversoes > 0 ? m.gasto / m.conversoes : null
           await prisma.snapshotCampanha.upsert({
             where: { campanhaId_data: { campanhaId: campanha.id, data: hoje } },
-            update: { gasto: m.gasto, impressoes: m.impressoes, cliques: m.cliques, conversoes: m.conversoes, cpl, roas: m.roas, ctr: m.ctr },
-            create: { campanhaId: campanha.id, data: hoje, gasto: m.gasto, impressoes: m.impressoes, cliques: m.cliques, conversoes: m.conversoes, cpl, roas: m.roas, ctr: m.ctr },
+            update: { gasto: m.gasto, impressoes: m.impressoes, cliques: m.cliques, conversoes: m.conversoes, cpl, roas: m.roas, ctr: m.ctr, valorConversao: m.valorConversao },
+            create: { campanhaId: campanha.id, data: hoje, gasto: m.gasto, impressoes: m.impressoes, cliques: m.cliques, conversoes: m.conversoes, cpl, roas: m.roas, ctr: m.ctr, valorConversao: m.valorConversao },
           })
+          gastoTotal += m.gasto
+          impressoesTotal += m.impressoes
+          cliquesTotal += m.cliques
+          conversoesTotal += m.conversoes
+          valorConversaoTotal += m.valorConversao
         }
+        // Cria SnapshotConta agregando campanhas (necessário para overview no dashboard)
+        const cplConta = conversoesTotal > 0 ? gastoTotal / conversoesTotal : null
+        const ctrConta = impressoesTotal > 0 ? (cliquesTotal / impressoesTotal) * 100 : null
+        const roasConta = valorConversaoTotal > 0 && gastoTotal > 0 ? parseFloat((valorConversaoTotal / gastoTotal).toFixed(2)) : null
+        await prisma.snapshotConta.upsert({
+          where: { contaId_data: { contaId: conta.id, data: hoje } },
+          update: { gasto: gastoTotal, impressoes: impressoesTotal, cliques: cliquesTotal, conversoes: conversoesTotal, cpl: cplConta, ctr: ctrConta, roas: roasConta, valorConversao: valorConversaoTotal },
+          create: { contaId: conta.id, data: hoje, gasto: gastoTotal, impressoes: impressoesTotal, cliques: cliquesTotal, conversoes: conversoesTotal, cpl: cplConta, ctr: ctrConta, roas: roasConta, valorConversao: valorConversaoTotal },
+        })
         await prisma.contaAds.update({ where: { id: conta.id }, data: { ultimoSync: new Date() } })
         await verificarAlertas(conta.id)
         sucesso++

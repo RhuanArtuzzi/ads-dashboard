@@ -66,16 +66,24 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
     const conversoesTotal = snapshots.reduce((s, n) => s + n.conversoes, 0)
     const impressoesTotal = snapshots.reduce((s, n) => s + n.impressoes, 0)
     const cliquesTotal = snapshots.reduce((s, n) => s + n.cliques, 0)
+    const alcanceTotal = snapshots.reduce((s, n) => s + (n.alcance ?? 0), 0)
+    const valorConversaoTotal = snapshots.reduce((s, n) => s + (n.valorConversao ?? 0), 0)
     const cplMedio = conversoesTotal > 0 ? gastoTotal / conversoesTotal : null
     const ctrMedio = impressoesTotal > 0 ? (cliquesTotal / impressoesTotal) * 100 : null
+    const cpcMedio = cliquesTotal > 0 ? gastoTotal / cliquesTotal : null
+    const roasMedio = valorConversaoTotal > 0 && gastoTotal > 0 ? valorConversaoTotal / gastoTotal : null
 
     const resultado = {
       gastoTotal: parseFloat(gastoTotal.toFixed(2)),
       conversoesTotal,
       impressoesTotal,
       cliquesTotal,
+      alcanceTotal,
+      valorConversaoTotal: parseFloat(valorConversaoTotal.toFixed(2)),
       cplMedio: cplMedio ? parseFloat(cplMedio.toFixed(2)) : null,
       ctrMedio: ctrMedio ? parseFloat(ctrMedio.toFixed(2)) : null,
+      cpcMedio: cpcMedio ? parseFloat(cpcMedio.toFixed(2)) : null,
+      roasMedio: roasMedio ? parseFloat(roasMedio.toFixed(2)) : null,
     }
 
     if (cacheKey) await redis.setex(cacheKey, 3600, JSON.stringify(resultado))

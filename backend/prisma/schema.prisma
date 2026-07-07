@@ -73,35 +73,39 @@ enum StatusCampanha {
 }
 
 model SnapshotConta {
-  id         String   @id @default(cuid())
-  contaId    String
-  conta      ContaAds @relation(fields: [contaId], references: [id])
-  data       DateTime @db.Date
-  gasto      Float
-  impressoes Int
-  cliques    Int
-  conversoes Int
-  cpl        Float?
-  roas       Float?
-  ctr        Float?
-  criadoEm  DateTime @default(now())
+  id             String   @id @default(cuid())
+  contaId        String
+  conta          ContaAds @relation(fields: [contaId], references: [id])
+  data           DateTime @db.Date
+  gasto          Float
+  impressoes     Int
+  cliques        Int
+  conversoes     Int
+  cpl            Float?
+  roas           Float?
+  ctr            Float?
+  alcance        Int?
+  valorConversao Float?
+  criadoEm      DateTime @default(now())
 
   @@unique([contaId, data])
 }
 
 model SnapshotCampanha {
-  id         String   @id @default(cuid())
-  campanhaId String
-  campanha   Campanha @relation(fields: [campanhaId], references: [id])
-  data       DateTime @db.Date
-  gasto      Float
-  impressoes Int
-  cliques    Int
-  conversoes Int
-  cpl        Float?
-  roas       Float?
-  ctr        Float?
-  criadoEm  DateTime @default(now())
+  id             String   @id @default(cuid())
+  campanhaId     String
+  campanha       Campanha @relation(fields: [campanhaId], references: [id])
+  data           DateTime @db.Date
+  gasto          Float
+  impressoes     Int
+  cliques        Int
+  conversoes     Int
+  cpl            Float?
+  roas           Float?
+  ctr            Float?
+  alcance        Int?
+  valorConversao Float?
+  criadoEm      DateTime @default(now())
 
   @@unique([campanhaId, data])
 }
