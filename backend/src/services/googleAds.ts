@@ -150,11 +150,18 @@ export async function buscarMetricasGoogleAds(customerId: string): Promise<Googl
   `
 
   const cleanId = customerId.replace(/-/g, '')
-  const { data } = await axios.post(
-    `https://googleads.googleapis.com/v18/customers/${cleanId}/googleAds:search`,
-    { query },
-    { headers }
-  )
+  let data: any
+  try {
+    const res = await axios.post(
+      `https://googleads.googleapis.com/v18/customers/${cleanId}/googleAds:search`,
+      { query },
+      { headers }
+    )
+    data = res.data
+  } catch (e: any) {
+    if (e?.response?.status === 404) return []
+    throw e
+  }
 
   const rows = data.results ?? []
   return rows.map((r: any) => {
