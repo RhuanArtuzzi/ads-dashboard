@@ -9,20 +9,57 @@ function diasAtras(n: number): Date {
   return d
 }
 
-export const metricasRoutes: FastifyPluginAsync = async (app) => {
-  // GET /metricas/overview — cards da home
-  app.get('/overview', async (request) => {
-    const q = request.query as { periodo?: string }
-    const periodo = q.periodo ?? '30d'
-    const cacheKey = `overview:${periodo}`
-    const cached = await redis.get(cacheKey)
-    if (cached) return JSON.parse(cached)
+function resolverPeriodo(q: {
+  periodo?: string
+  dataInicio?: string
+  dataFim?: string
+}): { dataInicio: Date; dataFim?: Date; cacheavel: boolean } {
+  if (q.dataInicio && q.dataFim) {
+    const dataInicio = new Date(q.dataInicio)
+    const dataFim = new Date(q.dataFim)
+    dataFim.setHours(23, 59, 59, 999)
+    return { dataInicio, dataFim, cacheavel: false }
+  }
+  const dias = q.periodo === 'hoje' ? 0 : q.periodo === '7d' ? 7 : 30
+  return { dataInicio: diasAtras(dias), cacheavel: true }
+}
 
-    const dias = periodo === 'hoje' ? 0 : periodo === '7d' ? 7 : 30
-    const dataInicio = diasAtras(dias)
+export const metricasRoutes: FastifyPluginAsync = async (app) => {
+  // GET /metricas/overview
+  app.get('/overview', async (request) => {
+    const q = request.query as {
+      periodo?: string
+      clienteId?: string
+      plataforma?: string
+      dataInicio?: string
+      dataFim?: string
+    }
+
+    const periodo = q.periodo ?? '30d'
+    const clienteId = q.clienteId || null
+    const plataforma = q.plataforma || null
+    const { dataInicio, dataFim, cacheavel } = resolverPeriodo(q)
+
+    const cacheKey = cacheavel
+      ? `overview:${periodo}:${clienteId ?? 'all'}:${plataforma ?? 'TODOS'}`
+      : null
+
+    if (cacheKey) {
+      const cached = await redis.get(cacheKey)
+      if (cached) return JSON.parse(cached)
+    }
 
     const snapshots = await prisma.snapshotConta.findMany({
-      where: { data: { gte: dataInicio } },
+      where: {
+        data: {
+          gte: dataInicio,
+          ...(dataFim ? { lte: dataFim } : {}),
+        },
+        conta: {
+          ...(clienteId ? { clienteId } : {}),
+          ...(plataforma ? { plataforma: plataforma as any } : {}),
+        },
+      },
     })
 
     const gastoTotal = snapshots.reduce((s, n) => s + n.gasto, 0)
@@ -41,22 +78,38 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
       ctrMedio: ctrMedio ? parseFloat(ctrMedio.toFixed(2)) : null,
     }
 
-    await redis.setex(cacheKey, 3600, JSON.stringify(resultado))
+    if (cacheKey) await redis.setex(cacheKey, 3600, JSON.stringify(resultado))
     return resultado
   })
 
-  // GET /metricas/grafico — dados para gráfico de linha
+  // GET /metricas/grafico
   app.get('/grafico', async (request) => {
-    const q = request.query as { periodo?: string }
-    const dias = q.periodo === 'hoje' ? 0 : q.periodo === '7d' ? 7 : 30
-    const dataInicio = diasAtras(dias)
+    const q = request.query as {
+      periodo?: string
+      clienteId?: string
+      plataforma?: string
+      dataInicio?: string
+      dataFim?: string
+    }
+
+    const clienteId = q.clienteId || null
+    const plataforma = q.plataforma || null
+    const { dataInicio, dataFim } = resolverPeriodo(q)
 
     const snapshots = await prisma.snapshotConta.findMany({
-      where: { data: { gte: dataInicio } },
+      where: {
+        data: {
+          gte: dataInicio,
+          ...(dataFim ? { lte: dataFim } : {}),
+        },
+        conta: {
+          ...(clienteId ? { clienteId } : {}),
+          ...(plataforma ? { plataforma: plataforma as any } : {}),
+        },
+      },
       orderBy: { data: 'asc' },
     })
 
-    // Agrupar por data
     const porData: Record<string, { gasto: number; conversoes: number }> = {}
     for (const s of snapshots) {
       const key = s.data.toISOString().split('T')[0]
@@ -103,7 +156,7 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 
-  // GET /metricas/clientes/:id — detalhe do cliente
+  // GET /metricas/clientes/:id
   app.get('/clientes/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
     const cliente = await prisma.cliente.findUnique({
@@ -124,7 +177,7 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
     return cliente
   })
 
-  // GET /metricas/campanhas/:id — drill-down de campanha
+  // GET /metricas/campanhas/:id
   app.get('/campanhas/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
     const campanha = await prisma.campanha.findUnique({

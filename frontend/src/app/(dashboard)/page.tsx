@@ -4,41 +4,45 @@ import { MetricCard } from '@/components/dashboard/MetricCard'
 import { GastoChart } from '@/components/dashboard/GastoChart'
 import { AccountBalanceCard } from '@/components/dashboard/AccountBalanceCard'
 import { ResumoAgente } from '@/components/ia/ResumoAgente'
-import { Button } from '@/components/ui/button'
+import { FilterBar, type Filtros } from '@/components/dashboard/FilterBar'
 import { Card } from '@/components/ui/card'
 import { useOverview, useGrafico } from '@/lib/queries/metricas'
 import { useBalances } from '@/lib/queries/useBalances'
+import { useClientes } from '@/lib/queries/clientes'
 
-const periodos = [
-  { label: 'Hoje', value: 'hoje' },
-  { label: '7 dias', value: '7d' },
-  { label: '30 dias', value: '30d' },
-]
+const hoje = new Date().toISOString().split('T')[0]
+
+const filtrosIniciais: Filtros = {
+  clienteId: '',
+  plataforma: '',
+  periodo: '30d',
+  dataInicio: hoje,
+  dataFim: hoje,
+}
 
 export default function HomePage() {
-  const [periodo, setPeriodo] = useState('30d')
-  const { data: overview, isLoading } = useOverview(periodo)
-  const { data: grafico } = useGrafico(periodo)
-  const { data: balances, isLoading: balancesLoading, isError: balancesError } = useBalances()
+  const [filtros, setFiltros] = useState<Filtros>(filtrosIniciais)
+
+  const { data: clientes } = useClientes()
+  const { data: overview, isLoading } = useOverview(filtros)
+  const { data: grafico } = useGrafico(filtros)
+  const { data: balances, isLoading: balancesLoading, isError: balancesError } = useBalances({
+    clienteId: filtros.clienteId || undefined,
+    plataforma: filtros.plataforma || undefined,
+  })
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl font-bold text-ominy-text">Visao Geral</h1>
-        <div className="flex gap-2">
-          {periodos.map((p) => (
-            <Button
-              key={p.value}
-              size="sm"
-              variant={periodo === p.value ? 'primary' : 'outline'}
-              onClick={() => setPeriodo(p.value)}
-            >
-              {p.label}
-            </Button>
-          ))}
-        </div>
       </div>
+
+      {/* Filtros */}
+      <FilterBar
+        filtros={filtros}
+        clientes={clientes ?? []}
+        onChange={setFiltros}
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -83,7 +87,7 @@ export default function HomePage() {
         )}
       </Card>
 
-      {/* Saldos das Contas */}
+      {/* Saldos */}
       <div className="flex flex-col gap-4">
         <h2 className="font-heading text-sm text-ominy-cyan uppercase tracking-widest">
           Saldos das Contas

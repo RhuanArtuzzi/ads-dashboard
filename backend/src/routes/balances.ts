@@ -2,8 +2,28 @@ import type { FastifyPluginAsync } from 'fastify'
 import { prisma } from '../core/database.js'
 
 export const balancesRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/balances', async () => {
+  app.get('/balances', async (request) => {
+    const { clienteId, plataforma } = request.query as { clienteId?: string; plataforma?: string }
+
+    let accountIds: string[] | undefined
+    if (clienteId) {
+      const contas = await prisma.contaAds.findMany({
+        where: {
+          clienteId,
+          ativa: true,
+          ...(plataforma ? { plataforma: plataforma as any } : {}),
+        },
+        select: { accountId: true },
+      })
+      accountIds = contas.map((c) => c.accountId)
+      if (accountIds.length === 0) return { data: [] }
+    }
+
     const balances = await prisma.adAccountBalance.findMany({
+      where: {
+        ...(accountIds ? { accountId: { in: accountIds } } : {}),
+        ...(!accountIds && plataforma ? { platform: plataforma } : {}),
+      },
       orderBy: { updatedAt: 'desc' },
     })
 

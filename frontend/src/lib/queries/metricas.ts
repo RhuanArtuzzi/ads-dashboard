@@ -1,18 +1,31 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
+import type { Filtros } from '@/components/dashboard/FilterBar'
 
-export function useOverview(periodo = '30d') {
+function buildParams(filtros: Partial<Filtros>): string {
+  const p = new URLSearchParams()
+  if (filtros.periodo && filtros.periodo !== 'custom') p.set('periodo', filtros.periodo)
+  if (filtros.clienteId) p.set('clienteId', filtros.clienteId)
+  if (filtros.plataforma) p.set('plataforma', filtros.plataforma)
+  if (filtros.periodo === 'custom' && filtros.dataInicio) p.set('dataInicio', filtros.dataInicio)
+  if (filtros.periodo === 'custom' && filtros.dataFim) p.set('dataFim', filtros.dataFim)
+  return p.toString()
+}
+
+export function useOverview(filtros: Partial<Filtros> = {}) {
+  const params = buildParams(filtros)
   return useQuery({
-    queryKey: ['overview', periodo],
-    queryFn: () => api.get(`/metricas/overview?periodo=${periodo}`).then((r) => r.data),
+    queryKey: ['overview', filtros],
+    queryFn: () => api.get(`/metricas/overview?${params}`).then((r) => r.data),
     staleTime: 1000 * 60 * 5,
   })
 }
 
-export function useGrafico(periodo = '30d') {
+export function useGrafico(filtros: Partial<Filtros> = {}) {
+  const params = buildParams(filtros)
   return useQuery({
-    queryKey: ['grafico', periodo],
-    queryFn: () => api.get(`/metricas/grafico?periodo=${periodo}`).then((r) => r.data),
+    queryKey: ['grafico', filtros],
+    queryFn: () => api.get(`/metricas/grafico?${params}`).then((r) => r.data),
     staleTime: 1000 * 60 * 5,
   })
 }

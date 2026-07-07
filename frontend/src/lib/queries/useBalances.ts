@@ -11,15 +11,23 @@ interface Balance {
   updatedAt: string
 }
 
-async function fetchBalances(): Promise<Balance[]> {
-  const { data } = await api.get<{ data: Balance[] }>('/balances')
+interface BalanceFiltros {
+  clienteId?: string
+  plataforma?: string
+}
+
+async function fetchBalances(filtros: BalanceFiltros): Promise<Balance[]> {
+  const p = new URLSearchParams()
+  if (filtros.clienteId) p.set('clienteId', filtros.clienteId)
+  if (filtros.plataforma) p.set('plataforma', filtros.plataforma)
+  const { data } = await api.get<{ data: Balance[] }>(`/balances?${p.toString()}`)
   return data.data
 }
 
-export function useBalances() {
+export function useBalances(filtros: BalanceFiltros = {}) {
   return useQuery({
-    queryKey: ['balances'],
-    queryFn: fetchBalances,
+    queryKey: ['balances', filtros],
+    queryFn: () => fetchBalances(filtros),
     staleTime: 1000 * 60 * 10,
   })
 }
