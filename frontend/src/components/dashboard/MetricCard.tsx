@@ -19,7 +19,7 @@ export function MetricCard({ label, value, variacao, prefixo = '', sufixo = '', 
     <Card glow={destaque} className="flex flex-col gap-2">
       <span className="text-xs font-body text-ominy-muted uppercase tracking-widest">{label}</span>
       <span className={clsx('text-2xl font-heading font-bold', destaque ? 'text-ominy-cyan' : 'text-ominy-text')}>
-        {prefixo}{typeof value === 'number' ? value.toLocaleString('pt-BR') : value}{sufixo}
+        {value === '—' ? '—' : <>{prefixo}{typeof value === 'number' ? value.toLocaleString('pt-BR') : value}{sufixo}</>}
       </span>
       {variacao !== null && variacao !== undefined && (
         <span className={clsx('flex items-center gap-1 text-xs font-body', positivo ? 'text-green-400' : 'text-red-400')}>
