@@ -86,10 +86,14 @@ async function main() {
       const roas = parseFloat((2.5 + Math.random() * 2).toFixed(2))
       const ctr = parseFloat(((cliques / impressoes) * 100).toFixed(2))
 
+      const alcance = Math.floor(impressoes * (0.6 + Math.random() * 0.2))
+      const valorConversao = parseFloat((gasto * (roas * (0.9 + Math.random() * 0.2))).toFixed(2))
+      const cpc = cliques > 0 ? parseFloat((gasto / cliques).toFixed(2)) : null
+
       await prisma.snapshotConta.upsert({
         where: { contaId_data: { contaId: conta.id, data } },
-        update: {},
-        create: { contaId: conta.id, data, gasto, impressoes, cliques, conversoes, cpl, roas, ctr },
+        update: { alcance, valorConversao, roas },
+        create: { contaId: conta.id, data, gasto, impressoes, cliques, conversoes, cpl, roas, ctr, alcance, valorConversao },
       })
     }
   }
