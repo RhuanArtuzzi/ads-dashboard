@@ -29,6 +29,10 @@ set +a
 echo "==> Deploying stack ads-dashboard..."
 docker stack deploy -c docker-compose.yml ads-dashboard --with-registry-auth
 
+echo "==> Forçando atualização dos containers (imagens locais sem registry)..."
+docker service update --force ads-dashboard_backend
+docker service update --force ads-dashboard_frontend
+
 echo "==> Deploy concluído!"
 echo "    Frontend: https://dashboard.ominy.tec.br"
 echo "    Backend:  https://api-dashboard.ominy.tec.br"

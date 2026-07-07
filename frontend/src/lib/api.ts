@@ -20,6 +20,7 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('ominy_token')
+      document.cookie = 'ominy_token=; path=/; max-age=0'
       window.location.href = '/login'
     }
     return Promise.reject(err)
