@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { useOverview, useGrafico } from '@/lib/queries/metricas'
 import { useBalances } from '@/lib/queries/useBalances'
 import { useClientes } from '@/lib/queries/clientes'
+import { api } from '@/lib/api'
 
 const hoje = new Date().toISOString().split('T')[0]
 
@@ -20,8 +21,45 @@ const filtrosIniciais: Filtros = {
   dataFim: hoje,
 }
 
+function resolverDatasRelatorio(filtros: Filtros): { dataInicio: string; dataFim: string } {
+  const hoje = new Date().toISOString().split('T')[0]
+  if (filtros.periodo === 'custom') return { dataInicio: filtros.dataInicio, dataFim: filtros.dataFim }
+  const dias = filtros.periodo === 'hoje' ? 0 : filtros.periodo === '7d' ? 7 : 30
+  const inicio = new Date()
+  inicio.setDate(inicio.getDate() - dias)
+  return { dataInicio: inicio.toISOString().split('T')[0], dataFim: hoje }
+}
+
 export default function HomePage() {
   const [filtros, setFiltros] = useState<Filtros>(filtrosIniciais)
+  const [gerandoPDF, setGerandoPDF] = useState(false)
+
+  async function handleGerarRelatorio() {
+    if (!filtros.clienteId) return
+    setGerandoPDF(true)
+    try {
+      const { dataInicio, dataFim } = resolverDatasRelatorio(filtros)
+      const response = await api.post(
+        '/relatorios/gerar',
+        { clienteId: filtros.clienteId, dataInicio, dataFim },
+        { responseType: 'blob' }
+      )
+      const disposition = response.headers['content-disposition'] ?? ''
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? 'relatorio.pdf'
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Erro ao gerar relatório', e)
+    } finally {
+      setGerandoPDF(false)
+    }
+  }
 
   const { data: clientes } = useClientes()
   const { data: overview, isLoading } = useOverview(filtros)
@@ -35,6 +73,15 @@ export default function HomePage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl font-bold text-ominy-text">Visao Geral</h1>
+        {filtros.clienteId && (
+          <button
+            onClick={handleGerarRelatorio}
+            disabled={gerandoPDF}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-ominy-cyan text-ominy-cyan font-body text-sm font-medium hover:bg-ominy-cyan hover:text-ominy-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {gerandoPDF ? 'Gerando PDF...' : 'Gerar Relatorio PDF'}
+          </button>
+        )}
       </div>
 
       {/* Filtros */}

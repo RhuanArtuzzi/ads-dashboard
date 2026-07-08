@@ -9,6 +9,7 @@ import { alertasRoutes } from './routes/alertas.js'
 import { iaRoutes } from './routes/ia.js'
 import { syncRoutes } from './routes/sync.js'
 import { balancesRoutes } from './routes/balances.js'
+import { relatoriosRoutes } from './routes/relatorios.js'
 import { iniciarScheduler } from './jobs/scheduler.js'
 import { iniciarSyncWorker, registrarJobsRecorrentes } from './jobs/syncWorker.js'
 
@@ -34,6 +35,7 @@ await app.register(alertasRoutes, { prefix: '/alertas' })
 await app.register(iaRoutes, { prefix: '/ia' })
 await app.register(syncRoutes, { prefix: '/sync' })
 await app.register(balancesRoutes, { prefix: '' })
+await app.register(relatoriosRoutes, { prefix: '/relatorios' })
 
 app.get('/health', async () => ({ status: 'ok' }))
 
