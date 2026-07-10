@@ -60,11 +60,19 @@ export const clientesRoutes: FastifyPluginAsync = async (app) => {
     return conta
   })
 
-  // DELETE /contas/:id — remover conta
+  // DELETE /contas/:id — remover conta e dados relacionados
   app.delete('/contas/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
-    const conta = await prisma.contaAds.delete({ where: { id } }).catch(() => null)
+    const conta = await prisma.contaAds.findUnique({ where: { id } })
     if (!conta) return reply.code(404).send({ error: 'Conta não encontrada' })
+    const campanhas = await prisma.campanha.findMany({ where: { contaId: id }, select: { id: true } })
+    const campanhaIds = campanhas.map((c) => c.id)
+    if (campanhaIds.length > 0) {
+      await prisma.snapshotCampanha.deleteMany({ where: { campanhaId: { in: campanhaIds } } })
+    }
+    await prisma.campanha.deleteMany({ where: { contaId: id } })
+    await prisma.snapshotConta.deleteMany({ where: { contaId: id } })
+    await prisma.contaAds.delete({ where: { id } })
     return { ok: true }
   })
 
