@@ -85,6 +85,22 @@ export function useDeletarCliente() {
   })
 }
 
+export function useGoogleConfig() {
+  return useQuery({
+    queryKey: ['google-config'],
+    queryFn: () => api.get('/config/google').then((r) => r.data),
+  })
+}
+
+export function useSalvarGoogleConfig() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { refreshToken: string; loginCustomerId: string }) =>
+      api.put('/config/google', data).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['google-config'] }),
+  })
+}
+
 export function useSyncManual() {
   const qc = useQueryClient()
   return useMutation({

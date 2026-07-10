@@ -92,9 +92,9 @@ export default function HomePage() {
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-          Array.from({ length: 8 }).map((_, i) => (
+          Array.from({ length: 9 }).map((_, i) => (
             <Card key={i} className="h-24 animate-pulse bg-ominy-border" />
           ))
         ) : (
@@ -105,16 +105,15 @@ export default function HomePage() {
               prefixo="R$ "
               destaque
             />
-            <MetricCard label="Conversoes" value={overview?.conversoesTotal ?? '—'} />
+            <MetricCard
+              label="Impressoes"
+              value={overview?.impressoesTotal?.toLocaleString('pt-BR') ?? '—'}
+            />
+            <MetricCard label="Conversoes" value={overview?.conversoesTotal?.toLocaleString('pt-BR') ?? '—'} />
             <MetricCard
               label="Valor Conversao"
               value={overview?.valorConversaoTotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '—'}
               prefixo="R$ "
-            />
-            <MetricCard
-              label="ROAS Medio"
-              value={overview?.roasMedio?.toFixed(2) ?? '—'}
-              sufixo="x"
             />
             <MetricCard
               label="CPL Medio"
@@ -134,6 +133,11 @@ export default function HomePage() {
             <MetricCard
               label="Alcance Total"
               value={overview?.alcanceTotal?.toLocaleString('pt-BR') ?? '—'}
+            />
+            <MetricCard
+              label="ROAS Medio"
+              value={overview?.roasMedio?.toFixed(2) ?? '—'}
+              sufixo="x"
             />
           </>
         )}

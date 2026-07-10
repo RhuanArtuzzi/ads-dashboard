@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { env } from '../core/config.js'
+import { prisma } from '../core/database.js'
 
 interface GoogleAdsTokens {
   clientId: string
@@ -9,17 +10,34 @@ interface GoogleAdsTokens {
   loginCustomerId?: string
 }
 
-function getCredentials(): GoogleAdsTokens {
-  const { GOOGLE_ADS_CLIENT_ID, GOOGLE_ADS_CLIENT_SECRET, GOOGLE_ADS_REFRESH_TOKEN, GOOGLE_ADS_DEVELOPER_TOKEN, GOOGLE_ADS_LOGIN_CUSTOMER_ID } = env
-  if (!GOOGLE_ADS_CLIENT_ID || !GOOGLE_ADS_CLIENT_SECRET || !GOOGLE_ADS_REFRESH_TOKEN || !GOOGLE_ADS_DEVELOPER_TOKEN) {
-    throw new Error('Credenciais Google Ads não configuradas no .env')
+async function getCredentials(): Promise<GoogleAdsTokens> {
+  const { GOOGLE_ADS_CLIENT_ID, GOOGLE_ADS_CLIENT_SECRET, GOOGLE_ADS_DEVELOPER_TOKEN } = env
+  if (!GOOGLE_ADS_CLIENT_ID || !GOOGLE_ADS_CLIENT_SECRET || !GOOGLE_ADS_DEVELOPER_TOKEN) {
+    throw new Error('Credenciais Google Ads (CLIENT_ID/SECRET/DEVELOPER_TOKEN) não configuradas no servidor')
+  }
+
+  // Tenta banco de dados primeiro (configurado pela UI)
+  const dbConfig = await prisma.googleAdsConfig.findFirst()
+  if (dbConfig?.refreshToken && dbConfig?.loginCustomerId) {
+    return {
+      clientId: GOOGLE_ADS_CLIENT_ID,
+      clientSecret: GOOGLE_ADS_CLIENT_SECRET,
+      developerToken: GOOGLE_ADS_DEVELOPER_TOKEN,
+      refreshToken: dbConfig.refreshToken,
+      loginCustomerId: dbConfig.loginCustomerId,
+    }
+  }
+
+  // Fallback para variáveis de ambiente
+  if (!env.GOOGLE_ADS_REFRESH_TOKEN) {
+    throw new Error('Google Ads não configurado. Configure o Refresh Token em Conexoes.')
   }
   return {
     clientId: GOOGLE_ADS_CLIENT_ID,
     clientSecret: GOOGLE_ADS_CLIENT_SECRET,
-    refreshToken: GOOGLE_ADS_REFRESH_TOKEN,
     developerToken: GOOGLE_ADS_DEVELOPER_TOKEN,
-    loginCustomerId: GOOGLE_ADS_LOGIN_CUSTOMER_ID,
+    refreshToken: env.GOOGLE_ADS_REFRESH_TOKEN,
+    loginCustomerId: env.GOOGLE_ADS_LOGIN_CUSTOMER_ID,
   }
 }
 
@@ -53,7 +71,7 @@ export interface GoogleAdsSubConta {
 }
 
 export async function listarSubContasGoogle(): Promise<GoogleAdsSubConta[]> {
-  const creds = getCredentials()
+  const creds = await getCredentials()
   if (!creds.loginCustomerId) return []
 
   const accessToken = await obterAccessToken(creds)
@@ -99,7 +117,7 @@ export interface GoogleAdsCampanhaMetrics {
 }
 
 export async function buscarSaldoGoogleAds(customerId: string): Promise<{ balance: number; currency: string }> {
-  const creds = getCredentials()
+  const creds = await getCredentials()
   const accessToken = await obterAccessToken(creds)
   const headers = buildHeaders(accessToken, creds)
 
@@ -137,7 +155,7 @@ export async function buscarSaldoGoogleAds(customerId: string): Promise<{ balanc
 }
 
 export async function buscarMetricasGoogleAds(customerId: string): Promise<GoogleAdsCampanhaMetrics[]> {
-  const creds = getCredentials()
+  const creds = await getCredentials()
   const accessToken = await obterAccessToken(creds)
   const headers = buildHeaders(accessToken, creds)
 

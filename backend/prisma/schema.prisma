@@ -136,6 +136,15 @@ model ResumoIA {
   criadoEm DateTime @default(now())
 }
 
+model GoogleAdsConfig {
+  id              Int      @id @default(autoincrement())
+  refreshToken    String
+  loginCustomerId String
+  updatedAt       DateTime @updatedAt
+
+  @@map("google_ads_config")
+}
+
 model AdAccountBalance {
   id          Int      @id @default(autoincrement())
   platform    String   @db.VarChar(20)

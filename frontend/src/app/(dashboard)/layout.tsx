@@ -3,17 +3,17 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
 import {
-  LayoutDashboard, Users, Megaphone, Bell, Bot, Settings, LogOut
+  LayoutDashboard, Users, Megaphone, Bell, Bot, Link2, UserCog, LogOut
 } from 'lucide-react'
 
 const navItems = [
-  { href: '/',                  label: 'Home',         icon: LayoutDashboard },
-  { href: '/clientes',          label: 'Clientes',     icon: Users },
-  { href: '/meta',              label: 'Meta Ads',     icon: Megaphone },
-  { href: '/alertas',           label: 'Alertas',      icon: Bell },
-  { href: '/ia',                label: 'Agente IA',    icon: Bot },
-  { href: '/configuracoes/conexoes', label: 'Conexoes', icon: Settings },
-  { href: '/configuracoes/clientes', label: 'Clientes cfg', icon: Settings },
+  { href: '/',                       label: 'Home',      icon: LayoutDashboard },
+  { href: '/clientes',               label: 'Clientes',  icon: Users },
+  { href: '/meta',                   label: 'Meta Ads',  icon: Megaphone },
+  { href: '/alertas',                label: 'Alertas',   icon: Bell },
+  { href: '/ia',                     label: 'Agente IA', icon: Bot },
+  { href: '/configuracoes/conexoes', label: 'Conexoes',  icon: Link2 },
+  { href: '/configuracoes/clientes', label: 'Clientes',  icon: UserCog },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -22,6 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   function handleLogout() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('ominy_token')
+      document.cookie = 'ominy_token=; path=/; max-age=0'
       window.location.href = '/login'
     }
   }
