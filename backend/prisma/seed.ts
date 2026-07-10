@@ -69,14 +69,17 @@ async function main() {
 
   // Snapshots dos últimos 30 dias
   const hoje = new Date()
-  const contas = [contaA, contaB]
+  const contasComCampanhas = [
+    { conta: contaA, camps: [{ id: 'seed-camp-a1', split: 0.6 }, { id: 'seed-camp-a2', split: 0.4 }] },
+    { conta: contaB, camps: [{ id: 'seed-camp-b1', split: 0.7 }, { id: 'seed-camp-b2', split: 0.3 }] },
+  ]
 
   for (let i = 29; i >= 0; i--) {
     const data = new Date(hoje)
     data.setDate(data.getDate() - i)
     data.setHours(0, 0, 0, 0)
 
-    for (const conta of contas) {
+    for (const { conta, camps } of contasComCampanhas) {
       const base = conta.id === contaA.id ? 1 : 1.4
       const gasto = parseFloat((base * (200 + Math.random() * 80)).toFixed(2))
       const impressoes = Math.floor(base * (8000 + Math.random() * 3000))
@@ -85,16 +88,31 @@ async function main() {
       const cpl = conversoes > 0 ? parseFloat((gasto / conversoes).toFixed(2)) : null
       const roas = parseFloat((2.5 + Math.random() * 2).toFixed(2))
       const ctr = parseFloat(((cliques / impressoes) * 100).toFixed(2))
-
       const alcance = Math.floor(impressoes * (0.6 + Math.random() * 0.2))
       const valorConversao = parseFloat((gasto * (roas * (0.9 + Math.random() * 0.2))).toFixed(2))
-      const cpc = cliques > 0 ? parseFloat((gasto / cliques).toFixed(2)) : null
 
       await prisma.snapshotConta.upsert({
         where: { contaId_data: { contaId: conta.id, data } },
         update: { alcance, valorConversao, roas },
         create: { contaId: conta.id, data, gasto, impressoes, cliques, conversoes, cpl, roas, ctr, alcance, valorConversao },
       })
+
+      // SnapshotCampanha — divide proporcionalmente entre as campanhas da conta
+      for (const camp of camps) {
+        const cGasto = parseFloat((gasto * camp.split).toFixed(2))
+        const cImpressoes = Math.floor(impressoes * camp.split)
+        const cCliques = Math.floor(cliques * camp.split)
+        const cConversoes = Math.floor(conversoes * camp.split)
+        const cValorConversao = parseFloat((valorConversao * camp.split).toFixed(2))
+        const cCpl = cConversoes > 0 ? parseFloat((cGasto / cConversoes).toFixed(2)) : null
+        const cRoas = cValorConversao > 0 && cGasto > 0 ? parseFloat((cValorConversao / cGasto).toFixed(2)) : null
+        const cCtr = cImpressoes > 0 ? parseFloat(((cCliques / cImpressoes) * 100).toFixed(2)) : null
+        await prisma.snapshotCampanha.upsert({
+          where: { campanhaId_data: { campanhaId: camp.id, data } },
+          update: { gasto: cGasto, impressoes: cImpressoes, cliques: cCliques, conversoes: cConversoes, cpl: cCpl, roas: cRoas, ctr: cCtr, valorConversao: cValorConversao },
+          create: { campanhaId: camp.id, data, gasto: cGasto, impressoes: cImpressoes, cliques: cCliques, conversoes: cConversoes, cpl: cCpl, roas: cRoas, ctr: cCtr, valorConversao: cValorConversao },
+        })
+      }
     }
   }
 

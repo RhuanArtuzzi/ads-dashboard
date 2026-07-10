@@ -10,6 +10,7 @@ const LIGHT = '#F5F5F8'
 interface Kpis {
   gastoTotal: number
   conversoesTotal: number
+  impressoesTotal: number
   alcanceTotal: number
   valorConversaoTotal: number
   cplMedio: number | null
@@ -65,6 +66,7 @@ async function coletarDados(clienteId: string, dataInicio: Date, dataFim: Date) 
   const kpis: Kpis = {
     gastoTotal,
     conversoesTotal,
+    impressoesTotal,
     alcanceTotal,
     valorConversaoTotal,
     cplMedio: conversoesTotal > 0 ? gastoTotal / conversoesTotal : null,
@@ -187,16 +189,17 @@ function gerarPDF(dados: RelatorioDados): Promise<Buffer> {
     // KPI grid: 4 columns x 2 rows
     const kpis = [
       { label: 'GASTO TOTAL', value: brl(dados.kpis.gastoTotal) },
+      { label: 'IMPRESSÕES', value: dados.kpis.impressoesTotal.toLocaleString('pt-BR') },
       { label: 'CONVERSÕES', value: dados.kpis.conversoesTotal.toLocaleString('pt-BR') },
       { label: 'VALOR CONVERSÃO', value: brl(dados.kpis.valorConversaoTotal) },
-      { label: 'ROAS MÉDIO', value: dados.kpis.roasMedio ? dados.kpis.roasMedio.toFixed(2) + 'x' : '—' },
       { label: 'CPL MÉDIO', value: dados.kpis.cplMedio ? brl(dados.kpis.cplMedio) : '—' },
       { label: 'CPC MÉDIO', value: dados.kpis.cpcMedio ? brl(dados.kpis.cpcMedio) : '—' },
       { label: 'CTR MÉDIO', value: dados.kpis.ctrMedio ? dados.kpis.ctrMedio.toFixed(2) + '%' : '—' },
       { label: 'ALCANCE TOTAL', value: dados.kpis.alcanceTotal.toLocaleString('pt-BR') },
+      { label: 'ROAS MÉDIO', value: dados.kpis.roasMedio ? dados.kpis.roasMedio.toFixed(2) + 'x' : '—' },
     ]
 
-    const kpiCols = 4
+    const kpiCols = 3
     const kpiW = CW / kpiCols
     const kpiH = 46
 
