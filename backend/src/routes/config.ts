@@ -12,6 +12,13 @@ export const configRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
+  app.delete('/google', async (request, reply) => {
+    const existing = await prisma.googleAdsConfig.findFirst()
+    if (!existing) return reply.code(404).send({ error: 'Nenhuma configuração encontrada' })
+    await prisma.googleAdsConfig.delete({ where: { id: existing.id } })
+    return { ok: true }
+  })
+
   app.put('/google', async (request, reply) => {
     const { refreshToken, loginCustomerId } = request.body as {
       refreshToken?: string

@@ -101,6 +101,14 @@ export function useSalvarGoogleConfig() {
   })
 }
 
+export function useDesconectarGoogle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete('/config/google').then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['google-config'] }),
+  })
+}
+
 export function useSyncManual() {
   const qc = useQueryClient()
   return useMutation({

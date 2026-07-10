@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   useContas, useClientes, useCriarConta, useAtualizarConta, useDeletarConta,
-  useSyncManual, useGoogleConfig, useSalvarGoogleConfig,
+  useSyncManual, useGoogleConfig, useSalvarGoogleConfig, useDesconectarGoogle,
 } from '@/lib/queries/clientes'
 import { RefreshCw, Plus, Pencil, Trash2, X, Check, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 
@@ -28,6 +28,7 @@ export default function ConexoesPage() {
   const atualizar = useAtualizarConta()
   const deletar = useDeletarConta()
   const salvarGoogle = useSalvarGoogleConfig()
+  const desconectarGoogle = useDesconectarGoogle()
 
   const [novoMeta, setNovoMeta] = useState(false)
   const [metaForm, setMetaForm] = useState<MetaForm>(metaFormVazio)
@@ -234,12 +235,23 @@ export default function ConexoesPage() {
                 <p className="text-xs text-ominy-muted">Atualizado em: {new Date(googleConfig.updatedAt).toLocaleString('pt-BR')}</p>
               )}
             </div>
-            <Button size="sm" variant="outline" onClick={() => {
-              setEditandoGoogle(!editandoGoogle)
-              setGoogleForm({ refreshToken: '', loginCustomerId: googleConfig?.loginCustomerId ?? '' })
-            }}>
-              <Pencil size={12} /> {googleConfig ? 'Editar' : 'Configurar'}
-            </Button>
+            <div className="flex gap-2">
+              {googleConfig && (
+                <Button size="sm" variant="danger" disabled={desconectarGoogle.isPending} onClick={() => {
+                  if (confirm('Desconectar Google Ads? As sub-contas descobertas nao serao removidas.')) {
+                    desconectarGoogle.mutate()
+                  }
+                }}>
+                  Desconectar
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => {
+                setEditandoGoogle(!editandoGoogle)
+                setGoogleForm({ refreshToken: '', loginCustomerId: googleConfig?.loginCustomerId ?? '' })
+              }}>
+                <Pencil size={12} /> {googleConfig ? 'Editar' : 'Configurar'}
+              </Button>
+            </div>
           </div>
 
           {editandoGoogle && (
