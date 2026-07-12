@@ -32,6 +32,11 @@ interface InsightCampanha {
   date_stop: string
 }
 
+interface MetaInsightsPage {
+  data: InsightCampanha[]
+  paging?: { next?: string; cursors?: { after?: string } }
+}
+
 export function carregarConfigMeta(): MetaConfig {
   const configPath = path.resolve(__dirname, '../../config/meta.yaml')
   const raw = fs.readFileSync(configPath, 'utf8')
@@ -50,22 +55,23 @@ export async function buscarInsightsPeriodo(
   const results: InsightCampanha[] = []
   let after: string | null = null
 
-  do {
-    const res = await axios.get<{ data: InsightCampanha[]; paging?: { next?: string; cursors?: { after?: string } } }>(url, {
-      timeout: 60000,
-      params: {
-        fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,reach,actions,action_values',
-        time_range: JSON.stringify({ since, until }),
-        time_increment: 1,
-        level: 'campaign',
-        access_token: accessToken,
-        limit: 500,
-        ...(after ? { after } : {}),
-      },
-    })
-    results.push(...(res.data.data ?? []))
-    after = res.data.paging?.next ? (res.data.paging?.cursors?.after ?? null) : null
-  } while (after)
+  while (true) {
+    const params: Record<string, unknown> = {
+      fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,reach,actions,action_values',
+      time_range: JSON.stringify({ since, until }),
+      time_increment: 1,
+      level: 'campaign',
+      access_token: accessToken,
+      limit: 500,
+    }
+    if (after) params.after = after
+
+    const res = await axios.get<MetaInsightsPage>(url, { timeout: 60000, params })
+    const page: MetaInsightsPage = res.data
+    results.push(...(page.data ?? []))
+    after = page.paging?.next ? (page.paging?.cursors?.after ?? null) : null
+    if (!after) break
+  }
 
   return results
 }
