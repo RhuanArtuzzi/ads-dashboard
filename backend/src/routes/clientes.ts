@@ -1,13 +1,13 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { prisma } from '../core/database.js'
 import { clienteCreateSchema, clienteUpdateSchema, contaCreateSchema, contaUpdateSchema, usuarioClienteCreateSchema } from '../schemas/clientes.js'
-import { getUserContext, isAdmin } from '../core/tenant.js'
+import { getUserContext, isAdmin, isClienteAdmin } from '../core/tenant.js'
 import { hashPassword } from '../core/security.js'
 
 export const clientesRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', async (request) => {
     const ctx = getUserContext(request)
-    if (ctx.role === 'CLIENTE') {
+    if (ctx.role === 'CLIENTE' || ctx.role === 'CLIENTE_ADMIN') {
       if (!ctx.clienteId) return []
       const c = await prisma.cliente.findUnique({ where: { id: ctx.clienteId } })
       return c ? [c] : []
@@ -40,10 +40,10 @@ export const clientesRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true }
   })
 
-  // GET /contas — lista contas (filtrado por clienteId se for role CLIENTE)
+  // GET /contas — lista contas (filtrado por clienteId se for role CLIENTE ou CLIENTE_ADMIN)
   app.get('/contas', async (request) => {
     const ctx = getUserContext(request)
-    const where = ctx.role === 'CLIENTE' && ctx.clienteId ? { clienteId: ctx.clienteId } : {}
+    const where = (ctx.role === 'CLIENTE' || ctx.role === 'CLIENTE_ADMIN') && ctx.clienteId ? { clienteId: ctx.clienteId } : {}
     return prisma.contaAds.findMany({
       where,
       include: { cliente: { select: { nome: true } } },
@@ -102,10 +102,10 @@ export const clientesRoutes: FastifyPluginAsync = async (app) => {
     const { clienteId } = request.query as { clienteId?: string }
     return prisma.usuario.findMany({
       where: {
-        role: 'CLIENTE',
+        role: { in: ['CLIENTE', 'CLIENTE_ADMIN'] },
         ...(clienteId ? { clienteId } : {}),
       },
-      select: { id: true, nome: true, email: true, clienteId: true, criadoEm: true },
+      select: { id: true, nome: true, email: true, role: true, clienteId: true, criadoEm: true },
       orderBy: { criadoEm: 'asc' },
     })
   })
@@ -121,8 +121,8 @@ export const clientesRoutes: FastifyPluginAsync = async (app) => {
 
     const senhaHash = await hashPassword(body.data.senha)
     const usuario = await prisma.usuario.create({
-      data: { nome: body.data.nome, email: body.data.email, senhaHash, role: 'CLIENTE', clienteId: body.data.clienteId },
-      select: { id: true, nome: true, email: true, clienteId: true, criadoEm: true },
+      data: { nome: body.data.nome, email: body.data.email, senhaHash, role: body.data.role, clienteId: body.data.clienteId },
+      select: { id: true, nome: true, email: true, role: true, clienteId: true, criadoEm: true },
     })
     return reply.code(201).send(usuario)
   })

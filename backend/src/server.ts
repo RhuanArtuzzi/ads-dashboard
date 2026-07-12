@@ -11,6 +11,7 @@ import { syncRoutes } from './routes/sync.js'
 import { balancesRoutes } from './routes/balances.js'
 import { relatoriosRoutes } from './routes/relatorios.js'
 import { configRoutes } from './routes/config.js'
+import { authMetaRoutes } from './routes/authMeta.js'
 import { iniciarScheduler } from './jobs/scheduler.js'
 import { iniciarSyncWorker, registrarJobsRecorrentes } from './jobs/syncWorker.js'
 
@@ -20,8 +21,8 @@ await app.register(cors, { origin: true })
 await app.register(jwt, { secret: env.JWT_SECRET })
 
 app.addHook('onRequest', async (request, reply) => {
-  const publicRoutes = ['/auth/login', '/health']
-  if (publicRoutes.includes(request.url)) return
+  const publicRoutes = ['/auth/login', '/health', '/auth/meta/callback']
+  if (publicRoutes.some((r) => request.url === r || request.url.startsWith(r + '?'))) return
   try {
     await request.jwtVerify()
   } catch {
@@ -38,6 +39,7 @@ await app.register(syncRoutes, { prefix: '/sync' })
 await app.register(balancesRoutes, { prefix: '' })
 await app.register(relatoriosRoutes, { prefix: '/relatorios' })
 await app.register(configRoutes, { prefix: '/config' })
+await app.register(authMetaRoutes, { prefix: '/auth/meta' })
 
 app.get('/health', async () => ({ status: 'ok' }))
 

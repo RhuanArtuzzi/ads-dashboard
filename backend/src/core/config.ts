@@ -12,6 +12,10 @@ const envSchema = z.object({
   GOOGLE_ADS_REFRESH_TOKEN: z.string().optional(),
   GOOGLE_ADS_DEVELOPER_TOKEN: z.string().optional(),
   GOOGLE_ADS_LOGIN_CUSTOMER_ID: z.string().optional(),
+  FACEBOOK_APP_ID: z.string().optional(),
+  FACEBOOK_APP_SECRET: z.string().optional(),
+  FACEBOOK_REDIRECT_URI: z.string().optional(),
+  FRONTEND_URL: z.string().optional(),
 })
 
 export const env = envSchema.parse(process.env)

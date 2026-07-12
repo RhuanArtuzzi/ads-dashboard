@@ -147,10 +147,14 @@ export async function sincronizarTodas(): Promise<{ sucesso: number; erro: numbe
 
   await Promise.allSettled(
     contas.map(async (conta) => {
-      // Token: prioridade banco → fallback YAML
+      // Token: prioridade banco → fallback YAML → fallback MetaConnection OAuth
       let token = conta.accessToken ?? null
       if (!token && configYaml) {
         token = configYaml.contas.find((c) => c.account_id === conta.accountId)?.access_token ?? null
+      }
+      if (!token) {
+        const metaConn = await prisma.metaConnection.findUnique({ where: { clienteId: conta.clienteId } })
+        token = metaConn?.accessToken ?? null
       }
       if (!token) {
         erros.push(`Conta "${conta.accountName}" sem access token configurado`)
@@ -190,6 +194,10 @@ export async function sincronizarSaldos(): Promise<{ sucesso: number; erro: numb
       let token = conta.accessToken ?? null
       if (!token && configYaml) {
         token = configYaml.contas.find((c) => c.account_id === conta.accountId)?.access_token ?? null
+      }
+      if (!token) {
+        const metaConn = await prisma.metaConnection.findUnique({ where: { clienteId: conta.clienteId } })
+        token = metaConn?.accessToken ?? null
       }
       if (!token) {
         erros.push(`Conta "${conta.accountName}" sem access token configurado`)

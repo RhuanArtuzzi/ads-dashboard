@@ -85,6 +85,24 @@ export function useDeletarCliente() {
   })
 }
 
+export function useMetaConnections() {
+  return useQuery({
+    queryKey: ['meta-connections'],
+    queryFn: () => api.get('/auth/meta/connections').then((r) => r.data),
+  })
+}
+
+export function useDesconectarMeta() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (clienteId: string) => api.delete(`/auth/meta/connections/${clienteId}`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['meta-connections'] })
+      qc.invalidateQueries({ queryKey: ['contas'] })
+    },
+  })
+}
+
 export function useGoogleConfig() {
   return useQuery({
     queryKey: ['google-config'],
@@ -120,9 +138,38 @@ export function useUsuariosCliente(clienteId: string | null) {
 export function useCriarUsuarioCliente() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { clienteId: string; nome: string; email: string; senha: string }) =>
+    mutationFn: (data: { clienteId: string; nome: string; email: string; senha: string; role?: 'CLIENTE' | 'CLIENTE_ADMIN' }) =>
       api.post('/clientes/usuarios', data).then((r) => r.data),
     onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ['usuarios-cliente', vars.clienteId] }),
+  })
+}
+
+export function useMyMetaConnection() {
+  return useQuery({
+    queryKey: ['my-meta-connection'],
+    queryFn: () => api.get('/auth/meta/my-connection').then((r) => r.data),
+  })
+}
+
+export function useDesconectarMyMeta() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete('/auth/meta/my-connection').then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-meta-connection'] })
+      qc.invalidateQueries({ queryKey: ['contas'] })
+    },
+  })
+}
+
+export function useMetaOAuthUrl(clienteId?: string) {
+  return useQuery({
+    queryKey: ['meta-oauth-url', clienteId],
+    queryFn: () => {
+      const params = clienteId ? `?clienteId=${clienteId}` : ''
+      return api.get(`/auth/meta/url${params}`).then((r) => r.data as { url: string })
+    },
+    enabled: false,
   })
 }
 

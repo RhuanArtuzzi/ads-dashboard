@@ -21,10 +21,14 @@ export function isAdmin(ctx: UserContext): boolean {
   return ctx.role === 'ADMIN'
 }
 
+export function isClienteAdmin(ctx: UserContext): boolean {
+  return ctx.role === 'CLIENTE_ADMIN'
+}
+
 // Returns the clienteId to use in queries:
-// - CLIENTE role: always forced to their own clienteId
+// - CLIENTE/CLIENTE_ADMIN: always forced to their own clienteId
 // - ADMIN: uses the requested clienteId or null (= all)
 export function forceClienteId(ctx: UserContext, requested?: string | null): string | null {
-  if (ctx.role === 'CLIENTE') return ctx.clienteId
+  if (ctx.role === 'CLIENTE' || ctx.role === 'CLIENTE_ADMIN') return ctx.clienteId
   return requested || null
 }

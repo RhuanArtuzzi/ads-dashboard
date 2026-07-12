@@ -23,17 +23,31 @@ enum Role {
   ADMIN
   VIEWER
   CLIENTE
+  CLIENTE_ADMIN
 }
 
 model Cliente {
-  id         String     @id @default(cuid())
-  nome       String
-  targetCpl  Float?
-  targetRoas Float?
-  criadoEm  DateTime   @default(now())
-  contas     ContaAds[]
-  alertas    Alerta[]
-  usuarios   Usuario[]
+  id              String          @id @default(cuid())
+  nome            String
+  targetCpl       Float?
+  targetRoas      Float?
+  criadoEm       DateTime        @default(now())
+  contas          ContaAds[]
+  alertas         Alerta[]
+  usuarios        Usuario[]
+  metaConnection  MetaConnection?
+}
+
+model MetaConnection {
+  id             Int       @id @default(autoincrement())
+  clienteId      String    @unique
+  cliente        Cliente   @relation(fields: [clienteId], references: [id])
+  accessToken    String
+  tokenExpiresAt DateTime?
+  metaUserId     String?
+  updatedAt      DateTime  @updatedAt
+
+  @@map("meta_connections")
 }
 
 model ContaAds {

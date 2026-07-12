@@ -2,7 +2,7 @@ export interface CurrentUser {
   id: string
   nome: string
   email: string
-  role: 'ADMIN' | 'VIEWER' | 'CLIENTE'
+  role: 'ADMIN' | 'VIEWER' | 'CLIENTE' | 'CLIENTE_ADMIN'
   clienteId: string | null
 }
 
@@ -23,4 +23,13 @@ export function isAdmin(): boolean {
 
 export function isCliente(): boolean {
   return getCurrentUser()?.role === 'CLIENTE'
+}
+
+export function isClienteAdmin(): boolean {
+  return getCurrentUser()?.role === 'CLIENTE_ADMIN'
+}
+
+export function isClienteRole(): boolean {
+  const role = getCurrentUser()?.role
+  return role === 'CLIENTE' || role === 'CLIENTE_ADMIN'
 }

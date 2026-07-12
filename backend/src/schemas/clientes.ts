@@ -30,6 +30,7 @@ export const usuarioClienteCreateSchema = z.object({
   nome: z.string().min(1),
   email: z.string().email(),
   senha: z.string().min(6),
+  role: z.enum(['CLIENTE', 'CLIENTE_ADMIN']).default('CLIENTE'),
 })
 
 export type ClienteCreateInput = z.infer<typeof clienteCreateSchema>

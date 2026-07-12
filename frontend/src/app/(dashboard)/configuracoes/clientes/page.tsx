@@ -19,10 +19,11 @@ interface UsuarioForm {
   nome: string
   email: string
   senha: string
+  role: 'CLIENTE' | 'CLIENTE_ADMIN'
 }
 
 const formVazio: ClienteForm = { nome: '', targetCpl: '', targetRoas: '' }
-const usuarioFormVazio: UsuarioForm = { nome: '', email: '', senha: '' }
+const usuarioFormVazio: UsuarioForm = { nome: '', email: '', senha: '', role: 'CLIENTE' }
 
 function UsuariosCliente({ clienteId, clienteNome }: { clienteId: string; clienteNome: string }) {
   const [aberto, setAberto] = useState(false)
@@ -50,7 +51,12 @@ function UsuariosCliente({ clienteId, clienteNome }: { clienteId: string; client
           {(usuarios ?? []).map((u: any) => (
             <div key={u.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-ominy-bg">
               <div>
-                <p className="text-sm text-ominy-text">{u.nome}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-ominy-text">{u.nome}</p>
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${u.role === 'CLIENTE_ADMIN' ? 'bg-ominy-purple/20 text-purple-400' : 'bg-ominy-border text-ominy-muted'}`}>
+                    {u.role === 'CLIENTE_ADMIN' ? 'Admin' : 'Viewer'}
+                  </span>
+                </div>
                 <p className="text-xs text-ominy-muted">{u.email}</p>
               </div>
               <Button
@@ -83,6 +89,20 @@ function UsuariosCliente({ clienteId, clienteNome }: { clienteId: string; client
                 value={novoForm.senha}
                 onChange={(e) => setNovoForm({ ...novoForm, senha: e.target.value })}
               />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setNovoForm({ ...novoForm, role: 'CLIENTE' })}
+                  className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${novoForm.role === 'CLIENTE' ? 'border-ominy-cyan bg-ominy-cyan/10 text-ominy-cyan' : 'border-ominy-border text-ominy-muted hover:text-ominy-text'}`}
+                >
+                  Viewer — so visualiza
+                </button>
+                <button
+                  onClick={() => setNovoForm({ ...novoForm, role: 'CLIENTE_ADMIN' })}
+                  className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${novoForm.role === 'CLIENTE_ADMIN' ? 'border-purple-500 bg-purple-500/10 text-purple-400' : 'border-ominy-border text-ominy-muted hover:text-ominy-text'}`}
+                >
+                  Admin — acessa configuracoes
+                </button>
+              </div>
               {criar.isError && (
                 <p className="text-xs text-red-400">
                   {(criar.error as any)?.response?.data?.error ?? 'Erro ao criar usuário'}

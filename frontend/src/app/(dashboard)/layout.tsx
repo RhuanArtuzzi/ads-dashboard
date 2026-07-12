@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { clsx } from 'clsx'
 import {
-  LayoutDashboard, Users, Megaphone, Bell, Bot, Link2, UserCog, LogOut
+  LayoutDashboard, Users, Megaphone, Bell, Bot, Link2, UserCog, LogOut, Settings
 } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 
@@ -18,16 +18,35 @@ const adminNavItems = [
   { href: '/configuracoes/clientes', label: 'Config',      icon: UserCog },
 ]
 
+const clienteAdminNavItems = [
+  { href: '/',                              label: 'Home',          icon: LayoutDashboard },
+  { href: '/meta',                          label: 'Meta Ads',      icon: Megaphone },
+  { href: '/alertas',                       label: 'Alertas',       icon: Bell },
+  { href: '/configuracoes/minha-conta',     label: 'Configuracoes', icon: Settings },
+]
+
 const clienteNavItems = [
   { href: '/',        label: 'Home',     icon: LayoutDashboard },
   { href: '/meta',    label: 'Meta Ads', icon: Megaphone },
   { href: '/alertas', label: 'Alertas',  icon: Bell },
 ]
 
+function getRoleLabel(role: string) {
+  if (role === 'ADMIN') return 'Admin'
+  if (role === 'CLIENTE_ADMIN') return 'Admin'
+  return 'Cliente'
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [user] = useState(() => getCurrentUser())
-  const navItems = user?.role === 'CLIENTE' ? clienteNavItems : adminNavItems
+
+  const navItems =
+    user?.role === 'ADMIN'
+      ? adminNavItems
+      : user?.role === 'CLIENTE_ADMIN'
+        ? clienteAdminNavItems
+        : clienteNavItems
 
   function handleLogout() {
     if (typeof window !== 'undefined') {
@@ -75,7 +94,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {user && (
             <div className="px-3 py-1.5">
               <p className="text-xs text-ominy-text font-medium truncate">{user.nome}</p>
-              <p className="text-xs text-ominy-muted truncate">{user.role === 'CLIENTE' ? 'Cliente' : 'Admin'}</p>
+              <p className="text-xs text-ominy-muted truncate">{getRoleLabel(user.role)}</p>
             </div>
           )}
           <button

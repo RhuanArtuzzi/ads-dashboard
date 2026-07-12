@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -7,7 +8,9 @@ import { Input } from '@/components/ui/input'
 import {
   useContas, useClientes, useCriarConta, useAtualizarConta, useDeletarConta,
   useSyncManual, useGoogleConfig, useSalvarGoogleConfig, useDesconectarGoogle,
+  useMetaConnections, useDesconectarMeta,
 } from '@/lib/queries/clientes'
+import { api } from '@/lib/api'
 import { RefreshCw, Plus, Pencil, Trash2, X, Check, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 
 interface MetaForm {
@@ -19,16 +22,30 @@ interface MetaForm {
 
 const metaFormVazio: MetaForm = { clienteId: '', accountId: '', accountName: '', accessToken: '' }
 
+function fmtDate(d: string | Date | null | undefined) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('pt-BR')
+}
+
+function isExpirando(expiresAt: string | null | undefined): boolean {
+  if (!expiresAt) return false
+  const diff = new Date(expiresAt).getTime() - Date.now()
+  return diff < 7 * 24 * 60 * 60 * 1000 // menos de 7 dias
+}
+
 export default function ConexoesPage() {
+  const searchParams = useSearchParams()
   const { data: contas } = useContas()
   const { data: clientes } = useClientes()
   const { data: googleConfig } = useGoogleConfig()
+  const { data: metaConnections } = useMetaConnections()
   const syncManual = useSyncManual()
   const criarMeta = useCriarConta()
   const atualizar = useAtualizarConta()
   const deletar = useDeletarConta()
   const salvarGoogle = useSalvarGoogleConfig()
   const desconectarGoogle = useDesconectarGoogle()
+  const desconectarMeta = useDesconectarMeta()
 
   const [novoMeta, setNovoMeta] = useState(false)
   const [metaForm, setMetaForm] = useState<MetaForm>(metaFormVazio)
@@ -38,6 +55,14 @@ export default function ConexoesPage() {
   const [verToken, setVerToken] = useState<Record<string, boolean>>({})
   const [googleForm, setGoogleForm] = useState({ refreshToken: '', loginCustomerId: '' })
   const [editandoGoogle, setEditandoGoogle] = useState(false)
+  const [oauthMsg, setOauthMsg] = useState<'sucesso' | 'erro' | null>(null)
+  const [conectandoMeta, setConectandoMeta] = useState<string | null>(null)
+
+  useEffect(() => {
+    const meta = searchParams.get('meta')
+    if (meta === 'sucesso') setOauthMsg('sucesso')
+    if (meta === 'erro') setOauthMsg('erro')
+  }, [searchParams])
 
   const contasMeta = (contas ?? []).filter((c: any) => c.plataforma === 'META_ADS')
   const contasGoogle = (contas ?? []).filter((c: any) => c.plataforma === 'GOOGLE_ADS')
@@ -45,6 +70,21 @@ export default function ConexoesPage() {
   function mascarar(token: string) {
     if (!token) return '—'
     return token.slice(0, 8) + '••••••••' + token.slice(-4)
+  }
+
+  function getMetaConn(clienteId: string) {
+    return (metaConnections ?? []).find((c: any) => c.clienteId === clienteId) ?? null
+  }
+
+  async function handleConectarMeta(clienteId: string) {
+    setConectandoMeta(clienteId)
+    try {
+      const { data } = await api.get('/auth/meta/url', { params: { clienteId } })
+      window.location.href = data.url
+    } catch {
+      setConectandoMeta(null)
+      alert('Erro ao gerar URL de conexão Meta. Verifique se FACEBOOK_APP_ID está configurado no servidor.')
+    }
   }
 
   return (
@@ -56,6 +96,23 @@ export default function ConexoesPage() {
           {syncManual.isPending ? 'Sincronizando...' : 'Sincronizar agora'}
         </Button>
       </div>
+
+      {oauthMsg === 'sucesso' && (
+        <Card>
+          <div className="flex items-center gap-2 text-green-400">
+            <CheckCircle size={16} />
+            <p className="text-sm">Meta Ads conectado com sucesso! As contas descobertas aparecem na lista abaixo.</p>
+          </div>
+        </Card>
+      )}
+      {oauthMsg === 'erro' && (
+        <Card>
+          <div className="flex items-center gap-2 text-red-400">
+            <AlertCircle size={16} />
+            <p className="text-sm">Erro ao conectar com a Meta. Tente novamente ou verifique as permissões do app.</p>
+          </div>
+        </Card>
+      )}
 
       {syncManual.data && (
         <Card>
@@ -73,11 +130,82 @@ export default function ConexoesPage() {
 
       {/* META ADS */}
       <section className="flex flex-col gap-4">
+        <div>
+          <h2 className="font-heading text-lg font-bold text-ominy-text">Meta Ads</h2>
+          <p className="text-xs text-ominy-muted mt-0.5">Conecte via OAuth ou adicione contas manualmente com Access Token.</p>
+        </div>
+
+        {/* OAuth por cliente */}
+        <Card>
+          <h3 className="font-heading text-sm text-ominy-cyan uppercase tracking-widest mb-4">Conectar via OAuth</h3>
+          <p className="text-xs text-ominy-muted mb-4">
+            Cada cliente autoriza o acesso ao próprio Business Manager. As contas de anúncio são descobertas automaticamente.
+            O token dura 60 dias — reautorize antes do vencimento.
+          </p>
+          {(clientes ?? []).length === 0 ? (
+            <p className="text-xs text-ominy-muted">Nenhum cliente cadastrado ainda.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {(clientes ?? []).map((cliente: any) => {
+                const conn = getMetaConn(cliente.id)
+                const expira = conn?.tokenExpiresAt
+                const expirando = isExpirando(expira)
+                return (
+                  <div key={cliente.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-ominy-bg border border-ominy-border">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-ominy-text">{cliente.nome}</p>
+                        {conn ? (
+                          <span className="flex items-center gap-1 text-xs text-green-400">
+                            <CheckCircle size={11} /> Conectado
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs text-ominy-muted">
+                            <AlertCircle size={11} /> Nao conectado
+                          </span>
+                        )}
+                      </div>
+                      {conn && (
+                        <p className={`text-xs ${expirando ? 'text-yellow-400' : 'text-ominy-muted'}`}>
+                          {expirando ? 'Expira em breve: ' : 'Valido ate: '}
+                          {fmtDate(expira)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      {conn && (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          disabled={desconectarMeta.isPending}
+                          onClick={() => {
+                            if (confirm(`Desconectar Meta Ads de "${cliente.nome}"? As contas descobertas não serão removidas.`)) {
+                              desconectarMeta.mutate(cliente.id)
+                            }
+                          }}
+                        >
+                          Desconectar
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={conectandoMeta === cliente.id}
+                        onClick={() => handleConectarMeta(cliente.id)}
+                      >
+                        {conectandoMeta === cliente.id ? 'Redirecionando...' : conn ? 'Renovar' : 'Conectar com Meta'}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Card>
+
+        {/* Contas manuais */}
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-heading text-lg font-bold text-ominy-text">Meta Ads</h2>
-            <p className="text-xs text-ominy-muted mt-0.5">Contas do Business Manager. Cada conta precisa de um Access Token de longa duracao.</p>
-          </div>
+          <p className="text-xs text-ominy-muted uppercase tracking-widest">Contas manuais (token direto)</p>
           <Button variant="outline" size="sm" onClick={() => setNovoMeta(!novoMeta)}>
             <Plus size={14} /> Nova conta
           </Button>
@@ -149,7 +277,7 @@ export default function ConexoesPage() {
         )}
 
         {contasMeta.length === 0 && !novoMeta && (
-          <Card><p className="text-ominy-muted text-sm text-center py-4">Nenhuma conta Meta Ads cadastrada.</p></Card>
+          <Card><p className="text-ominy-muted text-sm text-center py-4">Nenhuma conta Meta Ads cadastrada. Use OAuth acima ou adicione manualmente.</p></Card>
         )}
 
         {contasMeta.map((conta: any) => (
@@ -175,20 +303,21 @@ export default function ConexoesPage() {
                   <div className="flex items-center gap-2">
                     <p className="font-body font-medium text-ominy-text">{conta.accountName}</p>
                     <Badge variant={conta.ativa ? 'green' : 'gray'}>{conta.ativa ? 'Ativa' : 'Inativa'}</Badge>
+                    {!conta.accessToken && getMetaConn(conta.clienteId) && (
+                      <Badge variant="gray">via OAuth</Badge>
+                    )}
                   </div>
                   <p className="text-xs text-ominy-muted">Cliente: {conta.cliente?.nome} · ID: {conta.accountId}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-xs text-ominy-muted font-mono">
-                      Token: {conta.accessToken
-                        ? (verToken[conta.id] ? conta.accessToken : mascarar(conta.accessToken))
-                        : <span className="text-red-400">Nao configurado</span>}
-                    </p>
-                    {conta.accessToken && (
+                  {conta.accessToken && (
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-ominy-muted font-mono">
+                        Token: {verToken[conta.id] ? conta.accessToken : mascarar(conta.accessToken)}
+                      </p>
                       <button onClick={() => setVerToken((v) => ({ ...v, [conta.id]: !v[conta.id] }))} className="text-ominy-muted hover:text-ominy-cyan">
                         {verToken[conta.id] ? <EyeOff size={12} /> : <Eye size={12} />}
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   {conta.ultimoSync && (
                     <p className="text-xs text-ominy-muted">Ultimo sync: {new Date(conta.ultimoSync).toLocaleString('pt-BR')}</p>
                   )}
@@ -216,7 +345,6 @@ export default function ConexoesPage() {
           </p>
         </div>
 
-        {/* Config card */}
         <Card>
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
@@ -273,13 +401,6 @@ export default function ConexoesPage() {
                   value={googleForm.refreshToken}
                   onChange={(e) => setGoogleForm({ ...googleForm, refreshToken: e.target.value })}
                 />
-                <p className="text-xs text-ominy-muted">
-                  Gere em{' '}
-                  <a href="https://developers.google.com/oauthplayground" target="_blank" rel="noopener noreferrer" className="text-ominy-cyan hover:underline">
-                    OAuth Playground
-                  </a>
-                  {' '}com o escopo <span className="font-mono">https://www.googleapis.com/auth/adwords</span>
-                </p>
               </div>
               {salvarGoogle.isError && (
                 <p className="text-xs text-red-400">Erro ao salvar. Verifique os campos e tente novamente.</p>
@@ -298,7 +419,6 @@ export default function ConexoesPage() {
           )}
         </Card>
 
-        {/* Sub-contas descobertas */}
         {contasGoogle.length > 0 && (
           <div className="flex flex-col gap-2">
             <p className="text-xs text-ominy-muted uppercase tracking-widest">Sub-contas descobertas automaticamente</p>
