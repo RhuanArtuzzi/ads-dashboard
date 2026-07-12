@@ -213,7 +213,7 @@ function ConexoesPageContent() {
                         {conectandoMeta === cliente.id ? 'Redirecionando...' : conn ? 'Renovar' : 'Conectar com Meta'}
                       </Button>
                     </div>
-                    {backfillResult?.clienteId === cliente.id && (
+                    {backfillResult !== null && backfillResult.clienteId === cliente.id && (
                       <p className="text-xs text-green-400 mt-1 text-right">
                         Historico carregado: {backfillResult.sucesso} conta{backfillResult.sucesso !== 1 ? 's' : ''} ok
                         {backfillResult.erro > 0 && `, ${backfillResult.erro} com erro`}
