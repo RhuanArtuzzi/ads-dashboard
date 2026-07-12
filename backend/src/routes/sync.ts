@@ -1,12 +1,19 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { sincronizarTodas, sincronizarSaldos, sincronizarSaldosGoogle, sincronizarMetricasGoogle, sincronizarPorCliente, backfillHistorico } from '../services/sync.js'
 import { prisma } from '../core/database.js'
+import { redis } from '../core/redis.js'
 import { getUserContext, isAdmin, isClienteAdmin } from '../core/tenant.js'
+
+async function limparCacheOverview() {
+  const keys = await redis.keys('overview:*')
+  if (keys.length > 0) await redis.del(...keys)
+}
 
 export const syncRoutes: FastifyPluginAsync = async (app) => {
   app.post('/manual', async (_request, reply) => {
     try {
       const resultado = await sincronizarTodas()
+      await limparCacheOverview()
       return { ok: true, ...resultado }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -37,6 +44,7 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
   app.post('/manual/google/metricas', async (_request, reply) => {
     try {
       const resultado = await sincronizarMetricasGoogle()
+      await limparCacheOverview()
       return { ok: true, ...resultado }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -51,6 +59,7 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
     if (!ctx.clienteId) return reply.code(400).send({ error: 'clienteId não encontrado' })
     try {
       const resultado = await sincronizarPorCliente(ctx.clienteId)
+      await limparCacheOverview()
       return { ok: true, ...resultado }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -66,6 +75,7 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
     const dias = Math.min(Number(body.dias ?? 30), 90)
     try {
       const resultado = await backfillHistorico(body.clienteId, dias)
+      await limparCacheOverview()
       return { ok: true, ...resultado }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -82,6 +92,7 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
     const dias = Math.min(Number(body.dias ?? 30), 90)
     try {
       const resultado = await backfillHistorico(ctx.clienteId, dias)
+      await limparCacheOverview()
       return { ok: true, ...resultado }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)

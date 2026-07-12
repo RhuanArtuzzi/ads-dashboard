@@ -151,12 +151,6 @@ export default function HomePage() {
               value={overview?.taxaConversao?.toFixed(2) ?? '—'}
               sufixo="%"
             />
-            {/* Receita (apenas quando rastreada via pixel) */}
-            <MetricCard
-              label="Valor Conversao"
-              value={overview?.valorConversaoTotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '—'}
-              prefixo="R$ "
-            />
           </>
         )}
       </div>
