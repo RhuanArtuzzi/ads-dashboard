@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -33,7 +33,7 @@ function isExpirando(expiresAt: string | null | undefined): boolean {
   return diff < 7 * 24 * 60 * 60 * 1000 // menos de 7 dias
 }
 
-export default function ConexoesPage() {
+function ConexoesPageContent() {
   const searchParams = useSearchParams()
   const { data: contas } = useContas()
   const { data: clientes } = useClientes()
@@ -453,5 +453,13 @@ export default function ConexoesPage() {
         )}
       </section>
     </div>
+  )
+}
+
+export default function ConexoesPage() {
+  return (
+    <Suspense>
+      <ConexoesPageContent />
+    </Suspense>
   )
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ function diasParaExpirar(date: string | null | undefined): number | null {
   return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 
-export default function MinhaContaPage() {
+function MinhaContaContent() {
   const searchParams = useSearchParams()
   const [flash, setFlash] = useState<{ type: 'sucesso' | 'erro'; msg: string } | null>(null)
   const [conectando, setConectando] = useState(false)
@@ -140,5 +140,13 @@ export default function MinhaContaPage() {
         </div>
       </Card>
     </div>
+  )
+}
+
+export default function MinhaContaPage() {
+  return (
+    <Suspense>
+      <MinhaContaContent />
+    </Suspense>
   )
 }
