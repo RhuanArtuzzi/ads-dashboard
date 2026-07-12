@@ -127,6 +127,21 @@ export const clientesRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send(usuario)
   })
 
+  // PUT /usuarios/:id — atualizar role de usuário cliente (admin only)
+  app.put('/usuarios/:id', async (request, reply) => {
+    if (!isAdmin(getUserContext(request))) return reply.code(403).send({ error: 'Acesso negado' })
+    const { id } = request.params as { id: string }
+    const { role } = request.body as { role?: string }
+    if (!role || !['CLIENTE', 'CLIENTE_ADMIN'].includes(role)) return reply.code(400).send({ error: 'Role inválido' })
+    const usuario = await prisma.usuario.update({
+      where: { id },
+      data: { role: role as any },
+      select: { id: true, nome: true, email: true, role: true, clienteId: true },
+    }).catch(() => null)
+    if (!usuario) return reply.code(404).send({ error: 'Usuário não encontrado' })
+    return usuario
+  })
+
   // DELETE /usuarios/:id — remover usuário cliente (admin only)
   app.delete('/usuarios/:id', async (request, reply) => {
     if (!isAdmin(getUserContext(request))) return reply.code(403).send({ error: 'Acesso negado' })

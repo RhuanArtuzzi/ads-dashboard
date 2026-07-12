@@ -182,6 +182,15 @@ export function useDeletarUsuarioCliente() {
   })
 }
 
+export function useAtualizarUsuarioCliente() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, role, clienteId }: { id: string; role: 'CLIENTE' | 'CLIENTE_ADMIN'; clienteId: string }) =>
+      api.put(`/clientes/usuarios/${id}`, { role }).then((r) => r.data),
+    onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ['usuarios-cliente', vars.clienteId] }),
+  })
+}
+
 export function useSyncManual() {
   const qc = useQueryClient()
   return useMutation({

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   useClientes, useCriarCliente, useAtualizarCliente, useDeletarCliente,
-  useUsuariosCliente, useCriarUsuarioCliente, useDeletarUsuarioCliente,
+  useUsuariosCliente, useCriarUsuarioCliente, useDeletarUsuarioCliente, useAtualizarUsuarioCliente,
 } from '@/lib/queries/clientes'
 import { Pencil, Trash2, Plus, X, Check, UserPlus, ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -29,9 +29,11 @@ function UsuariosCliente({ clienteId, clienteNome }: { clienteId: string; client
   const [aberto, setAberto] = useState(false)
   const [novoForm, setNovoForm] = useState<UsuarioForm>(usuarioFormVazio)
   const [criando, setCriando] = useState(false)
+  const [editandoUserId, setEditandoUserId] = useState<string | null>(null)
   const { data: usuarios } = useUsuariosCliente(aberto ? clienteId : null)
   const criar = useCriarUsuarioCliente()
   const deletar = useDeletarUsuarioCliente()
+  const atualizar = useAtualizarUsuarioCliente()
 
   return (
     <div className="border-t border-ominy-border mt-3 pt-3">
@@ -50,23 +52,52 @@ function UsuariosCliente({ clienteId, clienteNome }: { clienteId: string; client
         <div className="mt-3 flex flex-col gap-2">
           {(usuarios ?? []).map((u: any) => (
             <div key={u.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-ominy-bg">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-ominy-text">{u.nome}</p>
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${u.role === 'CLIENTE_ADMIN' ? 'bg-ominy-purple/20 text-purple-400' : 'bg-ominy-border text-ominy-muted'}`}>
-                    {u.role === 'CLIENTE_ADMIN' ? 'Admin' : 'Viewer'}
-                  </span>
+              {editandoUserId === u.id ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <button
+                    onClick={() => atualizar.mutate({ id: u.id, role: 'CLIENTE', clienteId }, { onSuccess: () => setEditandoUserId(null) })}
+                    className={`px-2 py-1 text-xs rounded border transition-colors ${u.role === 'CLIENTE' ? 'border-ominy-cyan bg-ominy-cyan/10 text-ominy-cyan' : 'border-ominy-border text-ominy-muted hover:text-ominy-text'}`}
+                    disabled={atualizar.isPending}
+                  >
+                    Viewer
+                  </button>
+                  <button
+                    onClick={() => atualizar.mutate({ id: u.id, role: 'CLIENTE_ADMIN', clienteId }, { onSuccess: () => setEditandoUserId(null) })}
+                    className={`px-2 py-1 text-xs rounded border transition-colors ${u.role === 'CLIENTE_ADMIN' ? 'border-purple-500 bg-purple-500/10 text-purple-400' : 'border-ominy-border text-ominy-muted hover:text-ominy-text'}`}
+                    disabled={atualizar.isPending}
+                  >
+                    Admin
+                  </button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditandoUserId(null)}>
+                    <X size={11} />
+                  </Button>
                 </div>
-                <p className="text-xs text-ominy-muted">{u.email}</p>
-              </div>
-              <Button
-                size="sm"
-                variant="danger"
-                disabled={deletar.isPending}
-                onClick={() => deletar.mutate({ id: u.id, clienteId })}
-              >
-                <Trash2 size={11} />
-              </Button>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-ominy-text">{u.nome}</p>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${u.role === 'CLIENTE_ADMIN' ? 'bg-ominy-purple/20 text-purple-400' : 'bg-ominy-border text-ominy-muted'}`}>
+                      {u.role === 'CLIENTE_ADMIN' ? 'Admin' : 'Viewer'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-ominy-muted">{u.email}</p>
+                </div>
+              )}
+              {editandoUserId !== u.id && (
+                <div className="flex gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => setEditandoUserId(u.id)}>
+                    <Pencil size={11} />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={deletar.isPending}
+                    onClick={() => deletar.mutate({ id: u.id, clienteId })}
+                  >
+                    <Trash2 size={11} />
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
 
