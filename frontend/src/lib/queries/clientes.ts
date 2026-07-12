@@ -109,6 +109,32 @@ export function useDesconectarGoogle() {
   })
 }
 
+export function useUsuariosCliente(clienteId: string | null) {
+  return useQuery({
+    queryKey: ['usuarios-cliente', clienteId],
+    queryFn: () => api.get(`/clientes/usuarios?clienteId=${clienteId}`).then((r) => r.data),
+    enabled: !!clienteId,
+  })
+}
+
+export function useCriarUsuarioCliente() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { clienteId: string; nome: string; email: string; senha: string }) =>
+      api.post('/clientes/usuarios', data).then((r) => r.data),
+    onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ['usuarios-cliente', vars.clienteId] }),
+  })
+}
+
+export function useDeletarUsuarioCliente() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, clienteId }: { id: string; clienteId: string }) =>
+      api.delete(`/clientes/usuarios/${id}`).then((r) => r.data),
+    onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ['usuarios-cliente', vars.clienteId] }),
+  })
+}
+
 export function useSyncManual() {
   const qc = useQueryClient()
   return useMutation({

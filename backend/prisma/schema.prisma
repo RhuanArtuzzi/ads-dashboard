@@ -14,12 +14,15 @@ model Usuario {
   email     String   @unique
   senhaHash String?
   role      Role     @default(VIEWER)
+  clienteId String?
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
   criadoEm DateTime @default(now())
 }
 
 enum Role {
   ADMIN
   VIEWER
+  CLIENTE
 }
 
 model Cliente {
@@ -30,6 +33,7 @@ model Cliente {
   criadoEm  DateTime   @default(now())
   contas     ContaAds[]
   alertas    Alerta[]
+  usuarios   Usuario[]
 }
 
 model ContaAds {

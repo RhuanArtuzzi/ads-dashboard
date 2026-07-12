@@ -9,17 +9,8 @@ import { Card } from '@/components/ui/card'
 import { useOverview, useGrafico } from '@/lib/queries/metricas'
 import { useBalances } from '@/lib/queries/useBalances'
 import { useClientes } from '@/lib/queries/clientes'
+import { getCurrentUser } from '@/lib/auth'
 import { api } from '@/lib/api'
-
-const hoje = new Date().toISOString().split('T')[0]
-
-const filtrosIniciais: Filtros = {
-  clienteId: '',
-  plataforma: '',
-  periodo: '30d',
-  dataInicio: hoje,
-  dataFim: hoje,
-}
 
 function resolverDatasRelatorio(filtros: Filtros): { dataInicio: string; dataFim: string } {
   const hoje = new Date().toISOString().split('T')[0]
@@ -31,17 +22,31 @@ function resolverDatasRelatorio(filtros: Filtros): { dataInicio: string; dataFim
 }
 
 export default function HomePage() {
-  const [filtros, setFiltros] = useState<Filtros>(filtrosIniciais)
+  const [user] = useState(() => getCurrentUser())
+  const isCliente = user?.role === 'CLIENTE'
+  const lockedClienteId = isCliente ? (user?.clienteId ?? null) : null
+
+  const [filtros, setFiltros] = useState<Filtros>(() => {
+    const hoje = new Date().toISOString().split('T')[0]
+    return {
+      clienteId: lockedClienteId ?? '',
+      plataforma: '',
+      periodo: '30d',
+      dataInicio: hoje,
+      dataFim: hoje,
+    }
+  })
   const [gerandoPDF, setGerandoPDF] = useState(false)
 
   async function handleGerarRelatorio() {
-    if (!filtros.clienteId) return
+    const clienteId = lockedClienteId ?? filtros.clienteId
+    if (!clienteId) return
     setGerandoPDF(true)
     try {
       const { dataInicio, dataFim } = resolverDatasRelatorio(filtros)
       const response = await api.post(
         '/relatorios/gerar',
-        { clienteId: filtros.clienteId, dataInicio, dataFim },
+        { clienteId, dataInicio, dataFim },
         { responseType: 'blob' }
       )
       const disposition = response.headers['content-disposition'] ?? ''
@@ -65,15 +70,17 @@ export default function HomePage() {
   const { data: overview, isLoading } = useOverview(filtros)
   const { data: grafico } = useGrafico(filtros)
   const { data: balances, isLoading: balancesLoading, isError: balancesError } = useBalances({
-    clienteId: filtros.clienteId || undefined,
+    clienteId: (lockedClienteId ?? filtros.clienteId) || undefined,
     plataforma: filtros.plataforma || undefined,
   })
+
+  const podeGerarPDF = lockedClienteId ? true : !!filtros.clienteId
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl font-bold text-ominy-text">Visao Geral</h1>
-        {filtros.clienteId && (
+        {podeGerarPDF && (
           <button
             onClick={handleGerarRelatorio}
             disabled={gerandoPDF}
@@ -89,6 +96,7 @@ export default function HomePage() {
         filtros={filtros}
         clientes={clientes ?? []}
         onChange={setFiltros}
+        lockedClienteId={lockedClienteId}
       />
 
       {/* KPI Cards */}
@@ -193,8 +201,8 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Resumo IA */}
-      <ResumoAgente />
+      {/* Resumo IA — visivel apenas para admin */}
+      {!isCliente && <ResumoAgente />}
     </div>
   )
 }

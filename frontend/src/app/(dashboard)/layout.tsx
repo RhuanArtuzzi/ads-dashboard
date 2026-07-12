@@ -1,27 +1,38 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Megaphone, Bell, Bot, Link2, UserCog, LogOut
 } from 'lucide-react'
+import { getCurrentUser } from '@/lib/auth'
 
-const navItems = [
-  { href: '/',                       label: 'Home',      icon: LayoutDashboard },
-  { href: '/clientes',               label: 'Clientes',  icon: Users },
-  { href: '/meta',                   label: 'Meta Ads',  icon: Megaphone },
-  { href: '/alertas',                label: 'Alertas',   icon: Bell },
-  { href: '/ia',                     label: 'Agente IA', icon: Bot },
-  { href: '/configuracoes/conexoes', label: 'Conexoes',  icon: Link2 },
-  { href: '/configuracoes/clientes', label: 'Clientes',  icon: UserCog },
+const adminNavItems = [
+  { href: '/',                       label: 'Home',        icon: LayoutDashboard },
+  { href: '/clientes',               label: 'Clientes',    icon: Users },
+  { href: '/meta',                   label: 'Meta Ads',    icon: Megaphone },
+  { href: '/alertas',                label: 'Alertas',     icon: Bell },
+  { href: '/ia',                     label: 'Agente IA',   icon: Bot },
+  { href: '/configuracoes/conexoes', label: 'Conexoes',    icon: Link2 },
+  { href: '/configuracoes/clientes', label: 'Config',      icon: UserCog },
+]
+
+const clienteNavItems = [
+  { href: '/',        label: 'Home',     icon: LayoutDashboard },
+  { href: '/meta',    label: 'Meta Ads', icon: Megaphone },
+  { href: '/alertas', label: 'Alertas',  icon: Bell },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const [user] = useState(() => getCurrentUser())
+  const navItems = user?.role === 'CLIENTE' ? clienteNavItems : adminNavItems
 
   function handleLogout() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('ominy_token')
+      localStorage.removeItem('ominy_user')
       document.cookie = 'ominy_token=; path=/; max-age=0'
       window.location.href = '/login'
     }
@@ -59,8 +70,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-ominy-border">
+        {/* User info + Logout */}
+        <div className="p-3 border-t border-ominy-border flex flex-col gap-1">
+          {user && (
+            <div className="px-3 py-1.5">
+              <p className="text-xs text-ominy-text font-medium truncate">{user.nome}</p>
+              <p className="text-xs text-ominy-muted truncate">{user.role === 'CLIENTE' ? 'Cliente' : 'Admin'}</p>
+            </div>
+          )}
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm text-ominy-muted hover:text-red-400 hover:bg-red-400/5 transition-all"

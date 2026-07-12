@@ -14,6 +14,7 @@ interface FilterBarProps {
   filtros: Filtros
   clientes: Array<{ id: string; nome: string }>
   onChange: (filtros: Filtros) => void
+  lockedClienteId?: string | null
 }
 
 const periodos = [
@@ -29,7 +30,7 @@ const plataformas = [
   { label: 'Google', value: 'GOOGLE_ADS' },
 ]
 
-export function FilterBar({ filtros, clientes, onChange }: FilterBarProps) {
+export function FilterBar({ filtros, clientes, onChange, lockedClienteId }: FilterBarProps) {
   function set(partial: Partial<Filtros>) {
     onChange({ ...filtros, ...partial })
   }
@@ -39,16 +40,22 @@ export function FilterBar({ filtros, clientes, onChange }: FilterBarProps) {
       <div className="flex flex-wrap gap-4 items-end">
         <div className="flex flex-col gap-1.5 min-w-[180px] flex-1">
           <label className="text-xs text-ominy-muted uppercase tracking-widest">Cliente</label>
-          <select
-            className="w-full px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm focus:outline-none focus:border-ominy-cyan"
-            value={filtros.clienteId}
-            onChange={(e) => set({ clienteId: e.target.value })}
-          >
-            <option value="">Todos os clientes</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome}</option>
-            ))}
-          </select>
+          {lockedClienteId ? (
+            <div className="w-full px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm opacity-60 cursor-not-allowed">
+              {clientes.find((c) => c.id === lockedClienteId)?.nome ?? lockedClienteId}
+            </div>
+          ) : (
+            <select
+              className="w-full px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm focus:outline-none focus:border-ominy-cyan"
+              value={filtros.clienteId}
+              onChange={(e) => set({ clienteId: e.target.value })}
+            >
+              <option value="">Todos os clientes</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">

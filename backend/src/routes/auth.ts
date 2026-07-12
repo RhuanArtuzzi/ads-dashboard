@@ -20,15 +20,15 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(401).send({ error: 'Email ou senha inválidos' })
     }
 
-    const token = signToken({ id: usuario.id, email: usuario.email, role: usuario.role })
-    return { token, usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, role: usuario.role } }
+    const token = signToken({ id: usuario.id, email: usuario.email, role: usuario.role, clienteId: usuario.clienteId ?? null })
+    return { token, usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, role: usuario.role, clienteId: usuario.clienteId ?? null } }
   })
 
   app.get('/me', async (request, reply) => {
     const payload = request.user as { id: string }
     const usuario = await prisma.usuario.findUnique({
       where: { id: payload.id },
-      select: { id: true, nome: true, email: true, role: true, criadoEm: true },
+      select: { id: true, nome: true, email: true, role: true, clienteId: true, criadoEm: true },
     })
     if (!usuario) return reply.code(404).send({ error: 'Usuário não encontrado' })
     return usuario

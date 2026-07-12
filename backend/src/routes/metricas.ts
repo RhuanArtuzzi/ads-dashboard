@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { prisma } from '../core/database.js'
 import { redis } from '../core/redis.js'
+import { getUserContext, forceClienteId } from '../core/tenant.js'
 
 function diasAtras(n: number): Date {
   const d = new Date()
@@ -36,7 +37,8 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const periodo = q.periodo ?? '30d'
-    const clienteId = q.clienteId || null
+    const ctx = getUserContext(request)
+    const clienteId = forceClienteId(ctx, q.clienteId)
     const plataforma = q.plataforma || null
     const { dataInicio, dataFim, cacheavel } = resolverPeriodo(q)
 
@@ -100,7 +102,8 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
       dataFim?: string
     }
 
-    const clienteId = q.clienteId || null
+    const ctx = getUserContext(request)
+    const clienteId = forceClienteId(ctx, q.clienteId)
     const plataforma = q.plataforma || null
     const { dataInicio, dataFim } = resolverPeriodo(q)
 
@@ -134,8 +137,11 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
   })
 
   // GET /metricas/clientes — lista clientes com resumo
-  app.get('/clientes', async () => {
+  app.get('/clientes', async (request) => {
+    const ctx = getUserContext(request)
+    const where = ctx.role === 'CLIENTE' && ctx.clienteId ? { id: ctx.clienteId } : {}
     const clientes = await prisma.cliente.findMany({
+      where,
       include: {
         contas: {
           include: {
@@ -167,6 +173,10 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
   // GET /metricas/clientes/:id
   app.get('/clientes/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
+    const ctx = getUserContext(request)
+    if (ctx.role === 'CLIENTE' && ctx.clienteId !== id) {
+      return reply.code(403).send({ error: 'Acesso negado' })
+    }
     const cliente = await prisma.cliente.findUnique({
       where: { id },
       include: {

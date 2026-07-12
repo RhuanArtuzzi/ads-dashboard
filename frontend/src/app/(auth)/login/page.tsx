@@ -19,6 +19,7 @@ export default function LoginPage() {
     try {
       const { data } = await api.post('/auth/login', { email, senha })
       localStorage.setItem('ominy_token', data.token)
+      localStorage.setItem('ominy_user', JSON.stringify(data.usuario))
       document.cookie = `ominy_token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict`
       router.push('/')
     } catch {

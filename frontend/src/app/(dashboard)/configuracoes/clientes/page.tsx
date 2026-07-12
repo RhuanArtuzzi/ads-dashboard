@@ -3,8 +3,11 @@ import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useClientes, useCriarCliente, useAtualizarCliente, useDeletarCliente } from '@/lib/queries/clientes'
-import { Pencil, Trash2, Plus, X, Check } from 'lucide-react'
+import {
+  useClientes, useCriarCliente, useAtualizarCliente, useDeletarCliente,
+  useUsuariosCliente, useCriarUsuarioCliente, useDeletarUsuarioCliente,
+} from '@/lib/queries/clientes'
+import { Pencil, Trash2, Plus, X, Check, UserPlus, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface ClienteForm {
   nome: string
@@ -12,7 +15,108 @@ interface ClienteForm {
   targetRoas: string
 }
 
+interface UsuarioForm {
+  nome: string
+  email: string
+  senha: string
+}
+
 const formVazio: ClienteForm = { nome: '', targetCpl: '', targetRoas: '' }
+const usuarioFormVazio: UsuarioForm = { nome: '', email: '', senha: '' }
+
+function UsuariosCliente({ clienteId, clienteNome }: { clienteId: string; clienteNome: string }) {
+  const [aberto, setAberto] = useState(false)
+  const [novoForm, setNovoForm] = useState<UsuarioForm>(usuarioFormVazio)
+  const [criando, setCriando] = useState(false)
+  const { data: usuarios } = useUsuariosCliente(aberto ? clienteId : null)
+  const criar = useCriarUsuarioCliente()
+  const deletar = useDeletarUsuarioCliente()
+
+  return (
+    <div className="border-t border-ominy-border mt-3 pt-3">
+      <button
+        onClick={() => setAberto(!aberto)}
+        className="flex items-center gap-2 text-xs text-ominy-muted hover:text-ominy-text transition-colors"
+      >
+        {aberto ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        Acessos de clientes
+        {usuarios && usuarios.length > 0 && (
+          <span className="bg-ominy-cyan/20 text-ominy-cyan px-1.5 py-0.5 rounded text-xs">{usuarios.length}</span>
+        )}
+      </button>
+
+      {aberto && (
+        <div className="mt-3 flex flex-col gap-2">
+          {(usuarios ?? []).map((u: any) => (
+            <div key={u.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-ominy-bg">
+              <div>
+                <p className="text-sm text-ominy-text">{u.nome}</p>
+                <p className="text-xs text-ominy-muted">{u.email}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="danger"
+                disabled={deletar.isPending}
+                onClick={() => deletar.mutate({ id: u.id, clienteId })}
+              >
+                <Trash2 size={11} />
+              </Button>
+            </div>
+          ))}
+
+          {criando ? (
+            <div className="flex flex-col gap-2 p-3 rounded-lg border border-ominy-border bg-ominy-bg">
+              <Input
+                placeholder="Nome do usuário"
+                value={novoForm.nome}
+                onChange={(e) => setNovoForm({ ...novoForm, nome: e.target.value })}
+              />
+              <Input
+                type="email"
+                placeholder="Email de acesso"
+                value={novoForm.email}
+                onChange={(e) => setNovoForm({ ...novoForm, email: e.target.value })}
+              />
+              <Input
+                type="password"
+                placeholder="Senha (mín. 6 caracteres)"
+                value={novoForm.senha}
+                onChange={(e) => setNovoForm({ ...novoForm, senha: e.target.value })}
+              />
+              {criar.isError && (
+                <p className="text-xs text-red-400">
+                  {(criar.error as any)?.response?.data?.error ?? 'Erro ao criar usuário'}
+                </p>
+              )}
+              <div className="flex gap-2 justify-end">
+                <Button size="sm" variant="ghost" onClick={() => { setCriando(false); criar.reset(); setNovoForm(usuarioFormVazio) }}>
+                  <X size={12} /> Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!novoForm.nome || !novoForm.email || novoForm.senha.length < 6 || criar.isPending}
+                  onClick={() => criar.mutate(
+                    { clienteId, ...novoForm },
+                    { onSuccess: () => { setCriando(false); setNovoForm(usuarioFormVazio) } }
+                  )}
+                >
+                  <Check size={12} /> {criar.isPending ? 'Criando...' : 'Criar acesso'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setCriando(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-ominy-border text-xs text-ominy-muted hover:text-ominy-cyan hover:border-ominy-cyan transition-colors"
+            >
+              <UserPlus size={12} /> Adicionar acesso para {clienteNome}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function ConfigClientesPage() {
   const { data: clientes } = useClientes()
@@ -114,6 +218,8 @@ export default function ConfigClientesPage() {
                 </div>
               </div>
             )}
+
+            <UsuariosCliente clienteId={c.id} clienteNome={c.nome} />
           </Card>
         ))}
       </div>

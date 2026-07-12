@@ -25,7 +25,15 @@ export const contaUpdateSchema = z.object({
   ativa: z.boolean().optional(),
 })
 
+export const usuarioClienteCreateSchema = z.object({
+  clienteId: z.string().min(1),
+  nome: z.string().min(1),
+  email: z.string().email(),
+  senha: z.string().min(6),
+})
+
 export type ClienteCreateInput = z.infer<typeof clienteCreateSchema>
 export type ClienteUpdateInput = z.infer<typeof clienteUpdateSchema>
 export type ContaCreateInput = z.infer<typeof contaCreateSchema>
 export type ContaUpdateInput = z.infer<typeof contaUpdateSchema>
+export type UsuarioClienteCreateInput = z.infer<typeof usuarioClienteCreateSchema>
