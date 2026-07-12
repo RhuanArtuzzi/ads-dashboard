@@ -51,7 +51,7 @@ export async function buscarInsightsPeriodo(
   let after: string | null = null
 
   do {
-    const { data } = await axios.get(url, {
+    const res = await axios.get<{ data: InsightCampanha[]; paging?: { next?: string; cursors?: { after?: string } } }>(url, {
       timeout: 60000,
       params: {
         fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,reach,actions,action_values',
@@ -63,8 +63,8 @@ export async function buscarInsightsPeriodo(
         ...(after ? { after } : {}),
       },
     })
-    results.push(...(data.data ?? []))
-    after = data.paging?.next ? (data.paging?.cursors?.after ?? null) : null
+    results.push(...(res.data.data ?? []))
+    after = res.data.paging?.next ? (res.data.paging?.cursors?.after ?? null) : null
   } while (after)
 
   return results
