@@ -8,6 +8,7 @@ export interface Filtros {
   periodo: string
   dataInicio: string
   dataFim: string
+  contaId: string
 }
 
 interface FilterBarProps {
@@ -15,6 +16,8 @@ interface FilterBarProps {
   clientes: Array<{ id: string; nome: string }>
   onChange: (filtros: Filtros) => void
   lockedClienteId?: string | null
+  hideClientSelector?: boolean
+  contas?: Array<{ id: string; accountName: string }>
 }
 
 const periodos = [
@@ -30,7 +33,7 @@ const plataformas = [
   { label: 'Google', value: 'GOOGLE_ADS' },
 ]
 
-export function FilterBar({ filtros, clientes, onChange, lockedClienteId }: FilterBarProps) {
+export function FilterBar({ filtros, clientes, onChange, lockedClienteId, hideClientSelector, contas }: FilterBarProps) {
   function set(partial: Partial<Filtros>) {
     onChange({ ...filtros, ...partial })
   }
@@ -38,25 +41,43 @@ export function FilterBar({ filtros, clientes, onChange, lockedClienteId }: Filt
   return (
     <Card>
       <div className="flex flex-wrap gap-4 items-end">
-        <div className="flex flex-col gap-1.5 min-w-[180px] flex-1">
-          <label className="text-xs text-ominy-muted uppercase tracking-widest">Cliente</label>
-          {lockedClienteId ? (
-            <div className="w-full px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm opacity-60 cursor-not-allowed">
-              {clientes.find((c) => c.id === lockedClienteId)?.nome ?? lockedClienteId}
-            </div>
-          ) : (
+        {!hideClientSelector && (
+          <div className="flex flex-col gap-1.5 min-w-[180px] flex-1">
+            <label className="text-xs text-ominy-muted uppercase tracking-widest">Cliente</label>
+            {lockedClienteId ? (
+              <div className="w-full px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm opacity-60 cursor-not-allowed">
+                {clientes.find((c) => c.id === lockedClienteId)?.nome ?? lockedClienteId}
+              </div>
+            ) : (
+              <select
+                className="w-full px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm focus:outline-none focus:border-ominy-cyan"
+                value={filtros.clienteId}
+                onChange={(e) => set({ clienteId: e.target.value })}
+              >
+                <option value="">Todos os clientes</option>
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
+
+        {contas && contas.length > 0 && (
+          <div className="flex flex-col gap-1.5 min-w-[200px] flex-1">
+            <label className="text-xs text-ominy-muted uppercase tracking-widest">Conta</label>
             <select
               className="w-full px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm focus:outline-none focus:border-ominy-cyan"
-              value={filtros.clienteId}
-              onChange={(e) => set({ clienteId: e.target.value })}
+              value={filtros.contaId}
+              onChange={(e) => set({ contaId: e.target.value })}
             >
-              <option value="">Todos os clientes</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
+              <option value="">Todas as contas</option>
+              {contas.map((c) => (
+                <option key={c.id} value={c.id}>{c.accountName}</option>
               ))}
             </select>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <label className="text-xs text-ominy-muted uppercase tracking-widest">Plataforma</label>
@@ -75,7 +96,7 @@ export function FilterBar({ filtros, clientes, onChange, lockedClienteId }: Filt
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-ominy-muted uppercase tracking-widest">Período</label>
+          <label className="text-xs text-ominy-muted uppercase tracking-widest">Periodo</label>
           <div className="flex gap-1">
             {periodos.map((p) => (
               <Button
@@ -103,7 +124,7 @@ export function FilterBar({ filtros, clientes, onChange, lockedClienteId }: Filt
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-ominy-muted uppercase tracking-widest">Até</label>
+              <label className="text-xs text-ominy-muted uppercase tracking-widest">Ate</label>
               <input
                 type="date"
                 className="px-3 py-2 rounded-lg bg-ominy-bg border border-ominy-border text-ominy-text text-sm focus:outline-none focus:border-ominy-cyan"

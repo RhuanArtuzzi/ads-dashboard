@@ -8,7 +8,7 @@ import { FilterBar, type Filtros } from '@/components/dashboard/FilterBar'
 import { Card } from '@/components/ui/card'
 import { useOverview, useGrafico } from '@/lib/queries/metricas'
 import { useBalances } from '@/lib/queries/useBalances'
-import { useClientes } from '@/lib/queries/clientes'
+import { useClientes, useContas } from '@/lib/queries/clientes'
 import { getCurrentUser } from '@/lib/auth'
 import { api } from '@/lib/api'
 
@@ -23,8 +23,9 @@ function resolverDatasRelatorio(filtros: Filtros): { dataInicio: string; dataFim
 
 export default function HomePage() {
   const [user] = useState(() => getCurrentUser())
-  const isCliente = user?.role === 'CLIENTE'
-  const lockedClienteId = isCliente ? (user?.clienteId ?? null) : null
+  const isClienteRole = user?.role === 'CLIENTE' || user?.role === 'CLIENTE_ADMIN'
+  const isClienteAdmin = user?.role === 'CLIENTE_ADMIN'
+  const lockedClienteId = isClienteRole ? (user?.clienteId ?? null) : null
 
   const [filtros, setFiltros] = useState<Filtros>(() => {
     const hoje = new Date().toISOString().split('T')[0]
@@ -34,6 +35,7 @@ export default function HomePage() {
       periodo: '30d',
       dataInicio: hoje,
       dataFim: hoje,
+      contaId: '',
     }
   })
   const [gerandoPDF, setGerandoPDF] = useState(false)
@@ -67,6 +69,7 @@ export default function HomePage() {
   }
 
   const { data: clientes } = useClientes()
+  const { data: contas } = useContas()
   const { data: overview, isLoading } = useOverview(filtros)
   const { data: grafico } = useGrafico(filtros)
   const { data: balances, isLoading: balancesLoading, isError: balancesError } = useBalances({
@@ -97,6 +100,8 @@ export default function HomePage() {
         clientes={clientes ?? []}
         onChange={setFiltros}
         lockedClienteId={lockedClienteId}
+        hideClientSelector={isClienteRole}
+        contas={isClienteAdmin ? (contas ?? []) : undefined}
       />
 
       {/* KPI Cards */}
@@ -202,7 +207,7 @@ export default function HomePage() {
       </div>
 
       {/* Resumo IA — visivel apenas para admin */}
-      {!isCliente && <ResumoAgente />}
+      {!isClienteRole && <ResumoAgente />}
     </div>
   )
 }

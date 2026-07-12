@@ -7,6 +7,7 @@ function buildParams(filtros: Partial<Filtros>): string {
   if (filtros.periodo && filtros.periodo !== 'custom') p.set('periodo', filtros.periodo)
   if (filtros.clienteId) p.set('clienteId', filtros.clienteId)
   if (filtros.plataforma) p.set('plataforma', filtros.plataforma)
+  if (filtros.contaId) p.set('contaId', filtros.contaId)
   if (filtros.periodo === 'custom' && filtros.dataInicio) p.set('dataInicio', filtros.dataInicio)
   if (filtros.periodo === 'custom' && filtros.dataFim) p.set('dataFim', filtros.dataFim)
   return p.toString()

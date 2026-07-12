@@ -34,16 +34,18 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
       plataforma?: string
       dataInicio?: string
       dataFim?: string
+      contaId?: string
     }
 
     const periodo = q.periodo ?? '30d'
     const ctx = getUserContext(request)
     const clienteId = forceClienteId(ctx, q.clienteId)
     const plataforma = q.plataforma || null
+    const contaId = q.contaId || null
     const { dataInicio, dataFim, cacheavel } = resolverPeriodo(q)
 
     const cacheKey = cacheavel
-      ? `overview:${periodo}:${clienteId ?? 'all'}:${plataforma ?? 'TODOS'}`
+      ? `overview:${periodo}:${clienteId ?? 'all'}:${plataforma ?? 'TODOS'}:${contaId ?? 'all'}`
       : null
 
     if (cacheKey) {
@@ -57,6 +59,7 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
           gte: dataInicio,
           ...(dataFim ? { lte: dataFim } : {}),
         },
+        ...(contaId ? { contaId } : {}),
         conta: {
           ...(clienteId ? { clienteId } : {}),
           ...(plataforma ? { plataforma: plataforma as any } : {}),
@@ -100,11 +103,13 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
       plataforma?: string
       dataInicio?: string
       dataFim?: string
+      contaId?: string
     }
 
     const ctx = getUserContext(request)
     const clienteId = forceClienteId(ctx, q.clienteId)
     const plataforma = q.plataforma || null
+    const contaId = q.contaId || null
     const { dataInicio, dataFim } = resolverPeriodo(q)
 
     const snapshots = await prisma.snapshotConta.findMany({
@@ -113,6 +118,7 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
           gte: dataInicio,
           ...(dataFim ? { lte: dataFim } : {}),
         },
+        ...(contaId ? { contaId } : {}),
         conta: {
           ...(clienteId ? { clienteId } : {}),
           ...(plataforma ? { plataforma: plataforma as any } : {}),
