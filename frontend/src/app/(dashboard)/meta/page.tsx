@@ -5,6 +5,7 @@ import { useClientesResumo } from '@/lib/queries/metricas'
 import { useClienteDetalhe } from '@/lib/queries/metricas'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { getCurrentUser } from '@/lib/auth'
 
 function ClienteCampanhas({ clienteId }: { clienteId: string }) {
   const { data: cliente } = useClienteDetalhe(clienteId)
@@ -22,28 +23,33 @@ function ClienteCampanhas({ clienteId }: { clienteId: string }) {
 }
 
 export default function MetaPage() {
+  const user = getCurrentUser()
+  const lockedClienteId = (user?.role === 'CLIENTE' || user?.role === 'CLIENTE_ADMIN') ? user.clienteId : null
+
   const { data: clientes } = useClientesResumo()
   const [selecionado, setSelecionado] = useState<string | null>(null)
 
-  const clienteAtivo = selecionado ?? clientes?.[0]?.id ?? null
+  const clienteAtivo = lockedClienteId ?? selecionado ?? clientes?.[0]?.id ?? null
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="font-heading text-2xl font-bold">Meta Ads</h1>
 
-      {/* Seletor de cliente */}
-      <div className="flex gap-2 flex-wrap">
-        {(clientes ?? []).map((c: any) => (
-          <Button
-            key={c.id}
-            size="sm"
-            variant={clienteAtivo === c.id ? 'primary' : 'outline'}
-            onClick={() => setSelecionado(c.id)}
-          >
-            {c.nome}
-          </Button>
-        ))}
-      </div>
+      {/* Seletor de cliente — oculto para CLIENTE/CLIENTE_ADMIN */}
+      {!lockedClienteId && (
+        <div className="flex gap-2 flex-wrap">
+          {(clientes ?? []).map((c: any) => (
+            <Button
+              key={c.id}
+              size="sm"
+              variant={clienteAtivo === c.id ? 'primary' : 'outline'}
+              onClick={() => setSelecionado(c.id)}
+            >
+              {c.nome}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {clienteAtivo && <ClienteCampanhas clienteId={clienteAtivo} />}
     </div>

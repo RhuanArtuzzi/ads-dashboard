@@ -139,7 +139,8 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
   // GET /metricas/clientes — lista clientes com resumo
   app.get('/clientes', async (request) => {
     const ctx = getUserContext(request)
-    const where = ctx.role === 'CLIENTE' && ctx.clienteId ? { id: ctx.clienteId } : {}
+    const isClienteRole = ctx.role === 'CLIENTE' || ctx.role === 'CLIENTE_ADMIN'
+    const where = isClienteRole && ctx.clienteId ? { id: ctx.clienteId } : {}
     const clientes = await prisma.cliente.findMany({
       where,
       include: {
@@ -174,7 +175,8 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
   app.get('/clientes/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
     const ctx = getUserContext(request)
-    if (ctx.role === 'CLIENTE' && ctx.clienteId !== id) {
+    const isClienteRole = ctx.role === 'CLIENTE' || ctx.role === 'CLIENTE_ADMIN'
+    if (isClienteRole && ctx.clienteId !== id) {
       return reply.code(403).send({ error: 'Acesso negado' })
     }
     const cliente = await prisma.cliente.findUnique({
