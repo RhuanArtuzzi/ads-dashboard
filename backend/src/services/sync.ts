@@ -2,6 +2,7 @@ import { prisma } from '../core/database.js'
 import {
   carregarConfigMeta,
   buscarInsights,
+  buscarInsightsPeriodo,
   buscarCampanhas,
   buscarSaldoConta,
   extrairConversoes,
@@ -129,6 +130,122 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
 
   await prisma.contaAds.update({ where: { id: contaId }, data: { ultimoSync: new Date() } })
   await verificarAlertas(contaId)
+}
+
+async function backfillConta(contaId: string, accountId: string, accessToken: string, apiVersion: string, dias: number) {
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  const since = new Date(hoje)
+  since.setDate(since.getDate() - dias + 1)
+
+  const sinceStr = since.toISOString().split('T')[0]
+  const hojStr = hoje.toISOString().split('T')[0]
+
+  const insights = await buscarInsightsPeriodo(accountId, accessToken, apiVersion, sinceStr, hojStr)
+  const campanhasApi = await buscarCampanhas(accountId, accessToken, apiVersion)
+
+  const porData: Record<string, typeof insights> = {}
+  for (const insight of insights) {
+    const d = insight.date_start
+    if (!porData[d]) porData[d] = []
+    porData[d].push(insight)
+  }
+
+  for (const [dataStr, dayInsights] of Object.entries(porData)) {
+    const [y, m, d] = dataStr.split('-').map(Number)
+    const data = new Date(y, m - 1, d)
+    data.setHours(0, 0, 0, 0)
+
+    let gastoTotal = 0, impressoesTotal = 0, cliquesTotal = 0, conversoesTotal = 0, alcanceTotal = 0, valorConversaoTotal = 0
+
+    for (const insight of dayInsights) {
+      const gasto = parseFloat(insight.spend ?? '0')
+      const impressoes = parseInt(insight.impressions ?? '0')
+      const cliques = parseInt(insight.clicks ?? '0')
+      const alcance = parseInt(insight.reach ?? '0')
+      const conversoes = extrairConversoes(insight.actions)
+      const valorConversao = extrairValorConversao(insight.action_values)
+      const ctr = parseFloat(insight.ctr ?? '0')
+      const cpl = conversoes > 0 ? gasto / conversoes : null
+      const roas = valorConversao > 0 && gasto > 0 ? parseFloat((valorConversao / gasto).toFixed(2)) : null
+
+      gastoTotal += gasto
+      impressoesTotal += impressoes
+      cliquesTotal += cliques
+      conversoesTotal += conversoes
+      alcanceTotal += alcance
+      valorConversaoTotal += valorConversao
+
+      const campanhaInfo = campanhasApi.find((c) => c.id === insight.campaign_id)
+      const campanha = await prisma.campanha.upsert({
+        where: { campanhaIdPlataforma_contaId: { campanhaIdPlataforma: insight.campaign_id, contaId } },
+        update: { nome: insight.campaign_name, status: mapearStatus(campanhaInfo?.status ?? 'ACTIVE'), atualizadoEm: new Date() },
+        create: { contaId, campanhaIdPlataforma: insight.campaign_id, nome: insight.campaign_name, status: mapearStatus(campanhaInfo?.status ?? 'ACTIVE') },
+      })
+
+      await prisma.snapshotCampanha.upsert({
+        where: { campanhaId_data: { campanhaId: campanha.id, data } },
+        update: { gasto, impressoes, cliques, conversoes, cpl, roas, ctr, alcance, valorConversao },
+        create: { campanhaId: campanha.id, data, gasto, impressoes, cliques, conversoes, cpl, roas, ctr, alcance, valorConversao },
+      })
+    }
+
+    const cplConta = conversoesTotal > 0 ? gastoTotal / conversoesTotal : null
+    const ctrConta = impressoesTotal > 0 ? (cliquesTotal / impressoesTotal) * 100 : null
+    const roasConta = valorConversaoTotal > 0 && gastoTotal > 0 ? parseFloat((valorConversaoTotal / gastoTotal).toFixed(2)) : null
+
+    await prisma.snapshotConta.upsert({
+      where: { contaId_data: { contaId, data } },
+      update: { gasto: gastoTotal, impressoes: impressoesTotal, cliques: cliquesTotal, conversoes: conversoesTotal, cpl: cplConta, ctr: ctrConta, roas: roasConta, alcance: alcanceTotal, valorConversao: valorConversaoTotal },
+      create: { contaId, data, gasto: gastoTotal, impressoes: impressoesTotal, cliques: cliquesTotal, conversoes: conversoesTotal, cpl: cplConta, ctr: ctrConta, roas: roasConta, alcance: alcanceTotal, valorConversao: valorConversaoTotal },
+    })
+  }
+}
+
+async function resolverToken(conta: { accessToken: string | null; accountId: string; clienteId: string }, configYaml: any) {
+  let token = conta.accessToken ?? null
+  if (!token && configYaml) {
+    token = configYaml.contas.find((c: any) => c.account_id === conta.accountId)?.access_token ?? null
+  }
+  if (!token) {
+    const metaConn = await prisma.metaConnection.findUnique({ where: { clienteId: conta.clienteId } })
+    token = metaConn?.accessToken ?? null
+  }
+  return token
+}
+
+export async function backfillHistorico(clienteId?: string, dias = 30): Promise<{ sucesso: number; erro: number; erros: string[] }> {
+  const contas = await prisma.contaAds.findMany({
+    where: { ativa: true, plataforma: 'META_ADS', ...(clienteId ? { clienteId } : {}) },
+  })
+  const apiVersion = 'v20.0'
+
+  let configYaml: Awaited<ReturnType<typeof carregarConfigMeta>> | null = null
+  if (configMetaDisponivel()) {
+    try { configYaml = carregarConfigMeta() } catch { /* ignora */ }
+  }
+
+  let sucesso = 0, erro = 0
+  const erros: string[] = []
+
+  for (const conta of contas) {
+    const token = await resolverToken(conta, configYaml)
+    if (!token) {
+      erros.push(`Conta "${conta.accountName}" sem access token configurado`)
+      erro++
+      continue
+    }
+    try {
+      await backfillConta(conta.id, conta.accountId, token, apiVersion, dias)
+      sucesso++
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      erros.push(`Erro em ${conta.accountName}: ${msg}`)
+      erro++
+    }
+  }
+
+  return { sucesso, erro, erros }
 }
 
 export async function sincronizarPorCliente(clienteId: string): Promise<{ sucesso: number; erro: number; erros: string[] }> {

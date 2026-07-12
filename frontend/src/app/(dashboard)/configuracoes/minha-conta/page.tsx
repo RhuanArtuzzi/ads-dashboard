@@ -3,9 +3,9 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useMyMetaConnection, useDesconectarMyMeta, useSyncManualCliente } from '@/lib/queries/clientes'
+import { useMyMetaConnection, useDesconectarMyMeta, useSyncManualCliente, useBackfillMinhasConta } from '@/lib/queries/clientes'
 import { api } from '@/lib/api'
-import { CheckCircle, XCircle, AlertTriangle, Link2, Unlink, RefreshCw } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, Link2, Unlink, RefreshCw, History } from 'lucide-react'
 
 function diasParaExpirar(date: string | null | undefined): number | null {
   if (!date) return null
@@ -21,6 +21,7 @@ function MinhaContaContent() {
   const { data: conn, isLoading, refetch } = useMyMetaConnection()
   const desconectar = useDesconectarMyMeta()
   const sync = useSyncManualCliente()
+  const backfill = useBackfillMinhasConta()
 
   useEffect(() => {
     const meta = searchParams.get('meta')
@@ -50,21 +51,44 @@ function MinhaContaContent() {
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl font-bold">Configuracoes</h1>
         {conn && (
-          <Button
-            variant="outline"
-            onClick={() => sync.mutate()}
-            disabled={sync.isPending}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw size={14} className={sync.isPending ? 'animate-spin' : ''} />
-            {sync.isPending ? 'Sincronizando...' : 'Sincronizar agora'}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => backfill.mutate({})}
+              disabled={backfill.isPending}
+              className="flex items-center gap-2"
+              title="Carregar historico dos ultimos 30 dias da Meta API"
+            >
+              <History size={14} />
+              {backfill.isPending ? 'Carregando...' : 'Historico 30d'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => sync.mutate()}
+              disabled={sync.isPending}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw size={14} className={sync.isPending ? 'animate-spin' : ''} />
+              {sync.isPending ? 'Sincronizando...' : 'Sincronizar agora'}
+            </Button>
+          </div>
         )}
       </div>
       {sync.data && (
         <div className="p-3 rounded-lg bg-ominy-bg border border-ominy-border text-sm text-ominy-text">
           Sync concluido: {sync.data.sucesso} conta{sync.data.sucesso !== 1 ? 's' : ''} ok
           {sync.data.erro > 0 && `, ${sync.data.erro} com erro`}
+        </div>
+      )}
+      {backfill.data && (
+        <div className="p-3 rounded-lg bg-ominy-bg border border-ominy-border text-sm text-ominy-text">
+          Historico carregado: {backfill.data.sucesso} conta{backfill.data.sucesso !== 1 ? 's' : ''} ok
+          {backfill.data.erro > 0 && `, ${backfill.data.erro} com erro`}
+          {backfill.data.erros?.length > 0 && (
+            <ul className="mt-1 text-xs text-red-400 list-disc list-inside">
+              {backfill.data.erros.map((e: string, i: number) => <li key={i}>{e}</li>)}
+            </ul>
+          )}
         </div>
       )}
 

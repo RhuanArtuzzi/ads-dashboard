@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input'
 import {
   useContas, useClientes, useCriarConta, useAtualizarConta, useDeletarConta,
   useSyncManual, useGoogleConfig, useSalvarGoogleConfig, useDesconectarGoogle,
-  useMetaConnections, useDesconectarMeta,
+  useMetaConnections, useDesconectarMeta, useBackfill,
 } from '@/lib/queries/clientes'
 import { api } from '@/lib/api'
-import { RefreshCw, Plus, Pencil, Trash2, X, Check, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
+import { RefreshCw, Plus, Pencil, Trash2, X, Check, Eye, EyeOff, CheckCircle, AlertCircle, History } from 'lucide-react'
 
 interface MetaForm {
   clienteId: string
@@ -46,6 +46,8 @@ function ConexoesPageContent() {
   const salvarGoogle = useSalvarGoogleConfig()
   const desconectarGoogle = useDesconectarGoogle()
   const desconectarMeta = useDesconectarMeta()
+  const backfill = useBackfill()
+  const [backfillResult, setBackfillResult] = useState<{ clienteId: string; sucesso: number; erro: number } | null>(null)
 
   const [novoMeta, setNovoMeta] = useState(false)
   const [metaForm, setMetaForm] = useState<MetaForm>(metaFormVazio)
@@ -172,7 +174,22 @@ function ConexoesPageContent() {
                         </p>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap justify-end">
+                      {conn && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={backfill.isPending}
+                          title="Carregar historico dos ultimos 30 dias da Meta API"
+                          onClick={() => backfill.mutate(
+                            { clienteId: cliente.id },
+                            { onSuccess: (d) => setBackfillResult({ clienteId: cliente.id, sucesso: d.sucesso, erro: d.erro }) }
+                          )}
+                        >
+                          <History size={12} />
+                          {backfill.isPending ? 'Carregando...' : 'Historico 30d'}
+                        </Button>
+                      )}
                       {conn && (
                         <Button
                           size="sm"
@@ -196,6 +213,12 @@ function ConexoesPageContent() {
                         {conectandoMeta === cliente.id ? 'Redirecionando...' : conn ? 'Renovar' : 'Conectar com Meta'}
                       </Button>
                     </div>
+                    {backfillResult?.clienteId === cliente.id && (
+                      <p className="text-xs text-green-400 mt-1 text-right">
+                        Historico carregado: {backfillResult.sucesso} conta{backfillResult.sucesso !== 1 ? 's' : ''} ok
+                        {backfillResult.erro > 0 && `, ${backfillResult.erro} com erro`}
+                      </p>
+                    )}
                   </div>
                 )
               })}

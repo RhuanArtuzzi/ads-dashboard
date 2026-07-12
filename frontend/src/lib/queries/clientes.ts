@@ -212,3 +212,27 @@ export function useSyncManualCliente() {
     },
   })
 }
+
+export function useBackfill() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ clienteId, dias = 30 }: { clienteId?: string; dias?: number }) =>
+      api.post('/sync/backfill', { clienteId, dias }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['overview'] })
+      qc.invalidateQueries({ queryKey: ['grafico'] })
+    },
+  })
+}
+
+export function useBackfillMinhasConta() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ dias = 30 }: { dias?: number } = {}) =>
+      api.post('/sync/backfill/minha-conta', { dias }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['overview'] })
+      qc.invalidateQueries({ queryKey: ['grafico'] })
+    },
+  })
+}

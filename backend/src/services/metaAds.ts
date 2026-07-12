@@ -39,6 +39,37 @@ export function carregarConfigMeta(): MetaConfig {
 }
 
 // accountId no banco ja inclui o prefixo act_ (ex: act_143086142456612)
+export async function buscarInsightsPeriodo(
+  accountId: string,
+  accessToken: string,
+  apiVersion: string,
+  since: string,
+  until: string
+): Promise<InsightCampanha[]> {
+  const url = `https://graph.facebook.com/${apiVersion}/${accountId}/insights`
+  const results: InsightCampanha[] = []
+  let after: string | null = null
+
+  do {
+    const { data } = await axios.get(url, {
+      timeout: 60000,
+      params: {
+        fields: 'campaign_id,campaign_name,spend,impressions,clicks,ctr,reach,actions,action_values',
+        time_range: JSON.stringify({ since, until }),
+        time_increment: 1,
+        level: 'campaign',
+        access_token: accessToken,
+        limit: 500,
+        ...(after ? { after } : {}),
+      },
+    })
+    results.push(...(data.data ?? []))
+    after = data.paging?.next ? (data.paging?.cursors?.after ?? null) : null
+  } while (after)
+
+  return results
+}
+
 export async function buscarInsights(
   accountId: string,
   accessToken: string,
