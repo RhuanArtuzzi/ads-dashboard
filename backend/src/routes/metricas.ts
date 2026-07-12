@@ -76,19 +76,18 @@ export const metricasRoutes: FastifyPluginAsync = async (app) => {
     const cplMedio = conversoesTotal > 0 ? gastoTotal / conversoesTotal : null
     const ctrMedio = impressoesTotal > 0 ? (cliquesTotal / impressoesTotal) * 100 : null
     const cpcMedio = cliquesTotal > 0 ? gastoTotal / cliquesTotal : null
-    const roasMedio = valorConversaoTotal > 0 && gastoTotal > 0 ? valorConversaoTotal / gastoTotal : null
+    const taxaConversao = cliquesTotal > 0 ? (conversoesTotal / cliquesTotal) * 100 : null
 
     const resultado = {
       gastoTotal: parseFloat(gastoTotal.toFixed(2)),
-      conversoesTotal,
-      impressoesTotal,
-      cliquesTotal,
       alcanceTotal,
-      valorConversaoTotal: parseFloat(valorConversaoTotal.toFixed(2)),
-      cplMedio: cplMedio ? parseFloat(cplMedio.toFixed(2)) : null,
+      impressoesTotal,
       ctrMedio: ctrMedio ? parseFloat(ctrMedio.toFixed(2)) : null,
       cpcMedio: cpcMedio ? parseFloat(cpcMedio.toFixed(2)) : null,
-      roasMedio: roasMedio ? parseFloat(roasMedio.toFixed(2)) : null,
+      conversoesTotal,
+      cplMedio: cplMedio ? parseFloat(cplMedio.toFixed(2)) : null,
+      taxaConversao: taxaConversao ? parseFloat(taxaConversao.toFixed(2)) : null,
+      valorConversaoTotal: parseFloat(valorConversaoTotal.toFixed(2)),
     }
 
     if (cacheKey) await redis.setex(cacheKey, 3600, JSON.stringify(resultado))

@@ -112,45 +112,50 @@ export default function HomePage() {
           ))
         ) : (
           <>
+            {/* Investimento */}
             <MetricCard
               label="Gasto Total"
               value={overview?.gastoTotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '—'}
               prefixo="R$ "
               destaque
             />
+            {/* Alcance */}
+            <MetricCard
+              label="Alcance Total"
+              value={overview?.alcanceTotal?.toLocaleString('pt-BR') ?? '—'}
+            />
             <MetricCard
               label="Impressoes"
               value={overview?.impressoesTotal?.toLocaleString('pt-BR') ?? '—'}
             />
-            <MetricCard label="Conversoes" value={overview?.conversoesTotal?.toLocaleString('pt-BR') ?? '—'} />
-            <MetricCard
-              label="Valor Conversao"
-              value={overview?.valorConversaoTotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '—'}
-              prefixo="R$ "
-            />
-            <MetricCard
-              label="CPL Medio"
-              value={overview?.cplMedio?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '—'}
-              prefixo="R$ "
-            />
-            <MetricCard
-              label="CPC Medio"
-              value={overview?.cpcMedio?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '—'}
-              prefixo="R$ "
-            />
+            {/* Engajamento */}
             <MetricCard
               label="CTR Medio"
               value={overview?.ctrMedio?.toFixed(2) ?? '—'}
               sufixo="%"
             />
             <MetricCard
-              label="Alcance Total"
-              value={overview?.alcanceTotal?.toLocaleString('pt-BR') ?? '—'}
+              label="CPC Medio"
+              value={overview?.cpcMedio?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '—'}
+              prefixo="R$ "
+            />
+            {/* Conversao */}
+            <MetricCard label="Conversoes" value={overview?.conversoesTotal?.toLocaleString('pt-BR') ?? '—'} />
+            <MetricCard
+              label="CPL Medio"
+              value={overview?.cplMedio?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '—'}
+              prefixo="R$ "
             />
             <MetricCard
-              label="ROAS Medio"
-              value={overview?.roasMedio?.toFixed(2) ?? '—'}
-              sufixo="x"
+              label="Taxa de Conversao"
+              value={overview?.taxaConversao?.toFixed(2) ?? '—'}
+              sufixo="%"
+            />
+            {/* Receita (apenas quando rastreada via pixel) */}
+            <MetricCard
+              label="Valor Conversao"
+              value={overview?.valorConversaoTotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '—'}
+              prefixo="R$ "
             />
           </>
         )}
