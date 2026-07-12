@@ -201,3 +201,14 @@ export function useSyncManual() {
     },
   })
 }
+
+export function useSyncManualCliente() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post('/sync/manual/minha-conta').then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['overview'] })
+      qc.invalidateQueries({ queryKey: ['sync-status'] })
+    },
+  })
+}

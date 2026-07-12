@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { sincronizarTodas, sincronizarSaldos, sincronizarSaldosGoogle, sincronizarMetricasGoogle } from '../services/sync.js'
+import { sincronizarTodas, sincronizarSaldos, sincronizarSaldosGoogle, sincronizarMetricasGoogle, sincronizarPorCliente } from '../services/sync.js'
 import { prisma } from '../core/database.js'
+import { getUserContext, isClienteAdmin } from '../core/tenant.js'
 
 export const syncRoutes: FastifyPluginAsync = async (app) => {
   app.post('/manual', async (_request, reply) => {
@@ -40,6 +41,20 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       return reply.code(500).send({ error: 'Erro ao sincronizar métricas Google Ads', details: msg })
+    }
+  })
+
+  // POST /sync/manual/minha-conta — sincroniza apenas as contas do CLIENTE_ADMIN autenticado
+  app.post('/manual/minha-conta', async (request, reply) => {
+    const ctx = getUserContext(request)
+    if (!isClienteAdmin(ctx)) return reply.code(403).send({ error: 'Acesso negado' })
+    if (!ctx.clienteId) return reply.code(400).send({ error: 'clienteId não encontrado' })
+    try {
+      const resultado = await sincronizarPorCliente(ctx.clienteId)
+      return { ok: true, ...resultado }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      return reply.code(500).send({ error: 'Erro ao sincronizar', details: msg })
     }
   })
 

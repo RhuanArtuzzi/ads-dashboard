@@ -3,7 +3,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useMyMetaConnection, useDesconectarMyMeta } from '@/lib/queries/clientes'
+import { useMyMetaConnection, useDesconectarMyMeta, useSyncManualCliente } from '@/lib/queries/clientes'
 import { api } from '@/lib/api'
 import { CheckCircle, XCircle, AlertTriangle, Link2, Unlink, RefreshCw } from 'lucide-react'
 
@@ -20,6 +20,7 @@ function MinhaContaContent() {
 
   const { data: conn, isLoading, refetch } = useMyMetaConnection()
   const desconectar = useDesconectarMyMeta()
+  const sync = useSyncManualCliente()
 
   useEffect(() => {
     const meta = searchParams.get('meta')
@@ -46,7 +47,26 @@ function MinhaContaContent() {
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      <h1 className="font-heading text-2xl font-bold">Configuracoes</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-heading text-2xl font-bold">Configuracoes</h1>
+        {conn && (
+          <Button
+            variant="outline"
+            onClick={() => sync.mutate()}
+            disabled={sync.isPending}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw size={14} className={sync.isPending ? 'animate-spin' : ''} />
+            {sync.isPending ? 'Sincronizando...' : 'Sincronizar agora'}
+          </Button>
+        )}
+      </div>
+      {sync.data && (
+        <div className="p-3 rounded-lg bg-ominy-bg border border-ominy-border text-sm text-ominy-text">
+          Sync concluido: {sync.data.sucesso} conta{sync.data.sucesso !== 1 ? 's' : ''} ok
+          {sync.data.erro > 0 && `, ${sync.data.erro} com erro`}
+        </div>
+      )}
 
       {flash && (
         <div className={`flex items-center gap-3 p-4 rounded-lg border ${flash.type === 'sucesso' ? 'border-green-500/30 bg-green-500/10 text-green-400' : 'border-red-500/30 bg-red-500/10 text-red-400'}`}>

@@ -131,6 +131,49 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
   await verificarAlertas(contaId)
 }
 
+export async function sincronizarPorCliente(clienteId: string): Promise<{ sucesso: number; erro: number; erros: string[] }> {
+  const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'META_ADS', clienteId } })
+  const apiVersion = 'v20.0'
+
+  let configYaml: Awaited<ReturnType<typeof carregarConfigMeta>> | null = null
+  if (configMetaDisponivel()) {
+    try { configYaml = carregarConfigMeta() } catch { /* ignora */ }
+  }
+
+  let sucesso = 0
+  let erro = 0
+  const erros: string[] = []
+
+  await Promise.allSettled(
+    contas.map(async (conta) => {
+      let token = conta.accessToken ?? null
+      if (!token && configYaml) {
+        token = configYaml.contas.find((c) => c.account_id === conta.accountId)?.access_token ?? null
+      }
+      if (!token) {
+        const metaConn = await prisma.metaConnection.findUnique({ where: { clienteId: conta.clienteId } })
+        token = metaConn?.accessToken ?? null
+      }
+      if (!token) {
+        erros.push(`Conta "${conta.accountName}" sem access token configurado`)
+        erro++
+        return
+      }
+      try {
+        await sincronizarConta(conta.id, conta.accountId, token, apiVersion)
+        sucesso++
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        erros.push(`Erro em ${conta.accountName}: ${msg}`)
+        await alertarFalhaSync(conta.clienteId, `Falha ao sincronizar métricas da conta "${conta.accountName}": ${msg}`)
+        erro++
+      }
+    })
+  )
+
+  return { sucesso, erro, erros }
+}
+
 export async function sincronizarTodas(): Promise<{ sucesso: number; erro: number; erros: string[] }> {
   const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'META_ADS' } })
   const apiVersion = 'v20.0'
