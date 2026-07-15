@@ -337,7 +337,11 @@ export async function sincronizarTodas(): Promise<{ sucesso: number; erro: numbe
         await sincronizarConta(conta.id, conta.accountId, token, apiVersion)
         sucesso++
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e)
+        const metaErr = (e as any)?.response?.data
+        const msg = e instanceof Error
+          ? (metaErr ? `${e.message} | Meta: ${JSON.stringify(metaErr)}` : e.message)
+          : String(e)
+        console.error(`[sync] Erro em ${conta.accountName} (${conta.accountId}):`, metaErr ?? msg)
         erros.push(`Erro em ${conta.accountName}: ${msg}`)
         await alertarFalhaSync(conta.clienteId, `Falha ao sincronizar métricas da conta "${conta.accountName}": ${msg}`)
         erro++
