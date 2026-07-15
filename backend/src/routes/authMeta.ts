@@ -4,7 +4,7 @@ import { prisma } from '../core/database.js'
 import { env } from '../core/config.js'
 import { getUserContext, isAdmin, isClienteAdmin } from '../core/tenant.js'
 
-const META_API_VERSION = 'v20.0'
+const META_API_VERSION = 'v22.0'
 const GRAPH = `https://graph.facebook.com/${META_API_VERSION}`
 
 export const authMetaRoutes: FastifyPluginAsync = async (app) => {

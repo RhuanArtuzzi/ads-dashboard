@@ -230,7 +230,7 @@ export async function backfillHistorico(clienteId?: string, dias = 30): Promise<
   const contas = await prisma.contaAds.findMany({
     where: { ativa: true, plataforma: 'META_ADS', ...(clienteId ? { clienteId } : {}) },
   })
-  const apiVersion = 'v20.0'
+  const apiVersion = 'v22.0'
 
   let configYaml: Awaited<ReturnType<typeof carregarConfigMeta>> | null = null
   if (configMetaDisponivel()) {
@@ -262,7 +262,7 @@ export async function backfillHistorico(clienteId?: string, dias = 30): Promise<
 
 export async function sincronizarPorCliente(clienteId: string): Promise<{ sucesso: number; erro: number; erros: string[] }> {
   const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'META_ADS', clienteId } })
-  const apiVersion = 'v20.0'
+  const apiVersion = 'v22.0'
 
   let configYaml: Awaited<ReturnType<typeof carregarConfigMeta>> | null = null
   if (configMetaDisponivel()) {
@@ -305,7 +305,7 @@ export async function sincronizarPorCliente(clienteId: string): Promise<{ sucess
 
 export async function sincronizarTodas(): Promise<{ sucesso: number; erro: number; erros: string[] }> {
   const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'META_ADS' } })
-  const apiVersion = 'v20.0'
+  const apiVersion = 'v22.0'
 
   // Carrega YAML como fallback (opcional)
   let configYaml: Awaited<ReturnType<typeof carregarConfigMeta>> | null = null
@@ -350,7 +350,7 @@ export async function sincronizarTodas(): Promise<{ sucesso: number; erro: numbe
 
 export async function sincronizarSaldos(): Promise<{ sucesso: number; erro: number; erros: string[] }> {
   const contas = await prisma.contaAds.findMany({ where: { ativa: true, plataforma: 'META_ADS' } })
-  const apiVersion = 'v20.0'
+  const apiVersion = 'v22.0'
 
   let configYaml: Awaited<ReturnType<typeof carregarConfigMeta>> | null = null
   if (configMetaDisponivel()) {
