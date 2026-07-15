@@ -1,7 +1,6 @@
 import { prisma } from '../core/database.js'
 import {
   carregarConfigMeta,
-  buscarInsights,
   buscarInsightsPeriodo,
   buscarCampanhas,
   buscarSaldoConta,
@@ -36,21 +35,21 @@ function mapearStatus(status: string): 'ATIVA' | 'PAUSADA' | 'REMOVIDA' | 'EM_RE
 }
 
 async function sincronizarConta(contaId: string, accountId: string, accessToken: string, apiVersion: string) {
-  // Buscar insights do dia
-  const insights = await buscarInsights(accountId, accessToken, apiVersion, 'today')
+  // Usar hoje em BRT (UTC-3) — time_range é mais compatível com tokens OAuth de usuário que date_preset
+  const agoraBRT = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  const hojeStr = agoraBRT.toISOString().split('T')[0]
+
+  const insights = await buscarInsightsPeriodo(accountId, accessToken, apiVersion, hojeStr, hojeStr)
   const campanhasApi = await buscarCampanhas(accountId, accessToken, apiVersion)
 
-  // Usar date_start da Meta (timezone da conta) em vez de new Date() UTC
-  // Evita salvar snapshot no dia errado quando sync roda entre 0h e 3h UTC (= 21h-0h BRT)
+  // Usar date_start da Meta como data canônica do snapshot; fallback BRT se sem campanhas ativas
   let dataSync: Date
   if (insights.length > 0 && insights[0].date_start) {
     const [y, m, d] = insights[0].date_start.split('-').map(Number)
     dataSync = new Date(y, m - 1, d)
     dataSync.setHours(0, 0, 0, 0)
   } else {
-    // Sem campanhas rodando hoje — usar BRT (UTC-3) como fallback
-    const agoraBRT = new Date(Date.now() - 3 * 60 * 60 * 1000)
-    const [y, m, d] = agoraBRT.toISOString().split('T')[0].split('-').map(Number)
+    const [y, m, d] = hojeStr.split('-').map(Number)
     dataSync = new Date(y, m - 1, d)
     dataSync.setHours(0, 0, 0, 0)
   }
