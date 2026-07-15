@@ -14,12 +14,14 @@ interface Balance {
 interface BalanceFiltros {
   clienteId?: string
   plataforma?: string
+  contaId?: string
 }
 
 async function fetchBalances(filtros: BalanceFiltros): Promise<Balance[]> {
   const p = new URLSearchParams()
   if (filtros.clienteId) p.set('clienteId', filtros.clienteId)
   if (filtros.plataforma) p.set('plataforma', filtros.plataforma)
+  if (filtros.contaId) p.set('contaId', filtros.contaId)
   const { data } = await api.get<{ data: Balance[] }>(`/balances?${p.toString()}`)
   return data.data
 }

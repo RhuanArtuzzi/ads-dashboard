@@ -3,10 +3,16 @@ import { prisma } from '../core/database.js'
 
 export const balancesRoutes: FastifyPluginAsync = async (app) => {
   app.get('/balances', async (request) => {
-    const { clienteId, plataforma } = request.query as { clienteId?: string; plataforma?: string }
+    const { clienteId, plataforma, contaId } = request.query as { clienteId?: string; plataforma?: string; contaId?: string }
 
     let accountIds: string[] | undefined
-    if (clienteId) {
+
+    if (contaId) {
+      // Filtro por conta específica: busca o accountId externo dessa conta
+      const conta = await prisma.contaAds.findUnique({ where: { id: contaId }, select: { accountId: true } })
+      accountIds = conta ? [conta.accountId] : []
+      if (accountIds.length === 0) return { data: [] }
+    } else if (clienteId) {
       const contas = await prisma.contaAds.findMany({
         where: {
           clienteId,

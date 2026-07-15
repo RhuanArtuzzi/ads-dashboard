@@ -36,12 +36,24 @@ function mapearStatus(status: string): 'ATIVA' | 'PAUSADA' | 'REMOVIDA' | 'EM_RE
 }
 
 async function sincronizarConta(contaId: string, accountId: string, accessToken: string, apiVersion: string) {
-  const hoje = new Date()
-  hoje.setHours(0, 0, 0, 0)
-
   // Buscar insights do dia
   const insights = await buscarInsights(accountId, accessToken, apiVersion, 'today')
   const campanhasApi = await buscarCampanhas(accountId, accessToken, apiVersion)
+
+  // Usar date_start da Meta (timezone da conta) em vez de new Date() UTC
+  // Evita salvar snapshot no dia errado quando sync roda entre 0h e 3h UTC (= 21h-0h BRT)
+  let dataSync: Date
+  if (insights.length > 0 && insights[0].date_start) {
+    const [y, m, d] = insights[0].date_start.split('-').map(Number)
+    dataSync = new Date(y, m - 1, d)
+    dataSync.setHours(0, 0, 0, 0)
+  } else {
+    // Sem campanhas rodando hoje — usar BRT (UTC-3) como fallback
+    const agoraBRT = new Date(Date.now() - 3 * 60 * 60 * 1000)
+    const [y, m, d] = agoraBRT.toISOString().split('T')[0].split('-').map(Number)
+    dataSync = new Date(y, m - 1, d)
+    dataSync.setHours(0, 0, 0, 0)
+  }
 
   let gastoTotal = 0
   let impressoesTotal = 0
@@ -89,9 +101,9 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
 
     // Upsert snapshot campanha
     await prisma.snapshotCampanha.upsert({
-      where: { campanhaId_data: { campanhaId: campanha.id, data: hoje } },
+      where: { campanhaId_data: { campanhaId: campanha.id, data: dataSync } },
       update: { gasto, impressoes, cliques, conversoes, cpl, roas, ctr, alcance, valorConversao },
-      create: { campanhaId: campanha.id, data: hoje, gasto, impressoes, cliques, conversoes, cpl, roas, ctr, alcance, valorConversao },
+      create: { campanhaId: campanha.id, data: dataSync, gasto, impressoes, cliques, conversoes, cpl, roas, ctr, alcance, valorConversao },
     })
   }
 
@@ -101,7 +113,7 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
 
   // Upsert snapshot conta
   await prisma.snapshotConta.upsert({
-    where: { contaId_data: { contaId, data: hoje } },
+    where: { contaId_data: { contaId, data: dataSync } },
     update: {
       gasto: gastoTotal,
       impressoes: impressoesTotal,
@@ -115,7 +127,7 @@ async function sincronizarConta(contaId: string, accountId: string, accessToken:
     },
     create: {
       contaId,
-      data: hoje,
+      data: dataSync,
       gasto: gastoTotal,
       impressoes: impressoesTotal,
       cliques: cliquesTotal,

@@ -75,6 +75,7 @@ export default function HomePage() {
   const { data: balances, isLoading: balancesLoading, isError: balancesError } = useBalances({
     clienteId: (lockedClienteId ?? filtros.clienteId) || undefined,
     plataforma: filtros.plataforma || undefined,
+    contaId: filtros.contaId || undefined,
   })
 
   const podeGerarPDF = lockedClienteId ? true : !!filtros.clienteId
